@@ -15,7 +15,7 @@
         0
       ],
       "id": "53630696-e48e-404a-83d3-6f91e1285bc3",
-      "name": "Webhook",
+      "name": "Webhook: Receive Credit Query",
       "webhookId": "5040c9a5-95be-42c4-bc97-33bf70052f59"
     },
     {
@@ -40,7 +40,7 @@
         0
       ],
       "id": "384c68f9-c62a-4bb0-8987-56a32e404a78",
-      "name": "Get many rows",
+      "name": "Supabase: Fetch Usage Records",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -59,7 +59,7 @@
         0
       ],
       "id": "fee38a78-5570-4861-8be9-2ab0d182be0c",
-      "name": "Code in JavaScript"
+      "name": "Code: Aggregate Credits"
     },
     {
       "parameters": {
@@ -72,7 +72,7 @@
         0
       ],
       "id": "ca8b80a6-5c32-4fab-b6b0-7f0a36a12c17",
-      "name": "Respond to Webhook"
+      "name": "Webhook: Return Credit Totals"
     },
     {
       "parameters": {
@@ -101,7 +101,7 @@
         0
       ],
       "id": "65949c74-d42f-4098-b507-222c620fef6c",
-      "name": "Create a row",
+      "name": "Supabase: Log Credit Event",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -112,44 +112,44 @@
   ],
   "pinData": {},
   "connections": {
-    "Webhook": {
+    "Webhook: Receive Credit Query": {
       "main": [
         [
           {
-            "node": "Create a row",
+            "node": "Supabase: Log Credit Event",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get many rows": {
+    "Supabase: Fetch Usage Records": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Code: Aggregate Credits",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript": {
+    "Code: Aggregate Credits": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Webhook: Return Credit Totals",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create a row": {
+    "Supabase: Log Credit Event": {
       "main": [
         [
           {
-            "node": "Get many rows",
+            "node": "Supabase: Fetch Usage Records",
             "type": "main",
             "index": 0
           }

@@ -10,7 +10,7 @@
           "mode": "id"
         },
         "options": {
-          "pineconeNamespace": "={{ $('Webhook').item.json.body.user_id }}-ns"
+          "pineconeNamespace": "={{ $('Webhook: Receive Upsert Request').item.json.body.user_id }}-ns"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
@@ -20,7 +20,7 @@
         0
       ],
       "id": "90e85722-b3d3-4403-a708-615855734e43",
-      "name": "Pinecone Vector Store",
+      "name": "Pinecone: Upsert Vectors",
       "credentials": {
         "pineconeApi": {
           "id": "mX5Mp9fM0gydbhMt",
@@ -31,41 +31,41 @@
     {
       "parameters": {
         "jsonMode": "expressionData",
-        "jsonData": "={{ $('Code').item.json.pageContent }}",
+        "jsonData": "={{ $('Code: Prepare Pinecone Documents').item.json.pageContent }}",
         "options": {
           "metadata": {
             "metadataValues": [
               {
                 "name": "id",
-                "value": "={{ $('Code').item.json.metadata.id }}"
+                "value": "={{ $('Code: Prepare Pinecone Documents').item.json.metadata.id }}"
               },
               {
                 "name": "thread_id",
-                "value": "={{ $('Code').item.json.metadata.thread_id }}"
+                "value": "={{ $('Code: Prepare Pinecone Documents').item.json.metadata.thread_id }}"
               },
               {
                 "name": "labelIds",
-                "value": "={{ $('Code').item.json.metadata.labelIds }}"
+                "value": "={{ $('Code: Prepare Pinecone Documents').item.json.metadata.labelIds }}"
               },
               {
                 "name": "sender_email",
-                "value": "={{ $('Code').item.json.metadata.sender_email }}"
+                "value": "={{ $('Code: Prepare Pinecone Documents').item.json.metadata.sender_email }}"
               },
               {
                 "name": "receiver_email",
-                "value": "={{ $('Code').item.json.metadata.receiver_email }}"
+                "value": "={{ $('Code: Prepare Pinecone Documents').item.json.metadata.receiver_email }}"
               },
               {
                 "name": "subject",
-                "value": "={{ $('Code').item.json.metadata.subject }}"
+                "value": "={{ $('Code: Prepare Pinecone Documents').item.json.metadata.subject }}"
               },
               {
                 "name": "date",
-                "value": "={{ $('Code').item.json.metadata.date }}"
+                "value": "={{ $('Code: Prepare Pinecone Documents').item.json.metadata.date }}"
               },
               {
                 "name": "date_epoch",
-                "value": "={{ $('Code').item.json.metadata.date_epoch }}"
+                "value": "={{ $('Code: Prepare Pinecone Documents').item.json.metadata.date_epoch }}"
               }
             ]
           }
@@ -78,7 +78,7 @@
         176
       ],
       "id": "de3996fc-42aa-42fe-8828-147beb694c85",
-      "name": "Default Data Loader"
+      "name": "Data Loader: Default Payload"
     },
     {
       "parameters": {
@@ -93,7 +93,7 @@
         208
       ],
       "id": "13b3a74a-b667-406b-8a0f-69e281693f0e",
-      "name": "Embeddings OpenAI",
+      "name": "OpenAI: Generate Embeddings",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -113,7 +113,7 @@
         352
       ],
       "id": "f2c5e591-f52d-447e-bd4a-29b0acaf3285",
-      "name": "Recursive Character Text Splitter"
+      "name": "Text Splitter: Recursive Character"
     },
     {
       "parameters": {
@@ -129,7 +129,7 @@
         16
       ],
       "id": "90beb127-f3f8-42ff-afed-796e106dc40a",
-      "name": "Webhook",
+      "name": "Webhook: Receive Upsert Request",
       "webhookId": "19b9566f-9e11-4015-a6b6-464fa02b212c"
     },
     {
@@ -143,7 +143,7 @@
         16
       ],
       "id": "4d0d7d47-b02e-4cac-9b49-304b4b07e1fa",
-      "name": "Code"
+      "name": "Code: Prepare Pinecone Documents"
     },
     {
       "parameters": {
@@ -160,71 +160,71 @@
         0
       ],
       "id": "ad0e86e7-6358-4123-9c9a-187ab8af978b",
-      "name": "Respond to Webhook"
+      "name": "Webhook: Return Upsert Result"
     }
   ],
   "pinData": {},
   "connections": {
-    "Default Data Loader": {
+    "Data Loader: Default Payload": {
       "ai_document": [
         [
           {
-            "node": "Pinecone Vector Store",
+            "node": "Pinecone: Upsert Vectors",
             "type": "ai_document",
             "index": 0
           }
         ]
       ]
     },
-    "Embeddings OpenAI": {
+    "OpenAI: Generate Embeddings": {
       "ai_embedding": [
         [
           {
-            "node": "Pinecone Vector Store",
+            "node": "Pinecone: Upsert Vectors",
             "type": "ai_embedding",
             "index": 0
           }
         ]
       ]
     },
-    "Recursive Character Text Splitter": {
+    "Text Splitter: Recursive Character": {
       "ai_textSplitter": [
         [
           {
-            "node": "Default Data Loader",
+            "node": "Data Loader: Default Payload",
             "type": "ai_textSplitter",
             "index": 0
           }
         ]
       ]
     },
-    "Webhook": {
+    "Webhook: Receive Upsert Request": {
       "main": [
         [
           {
-            "node": "Code",
+            "node": "Code: Prepare Pinecone Documents",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code": {
+    "Code: Prepare Pinecone Documents": {
       "main": [
         [
           {
-            "node": "Pinecone Vector Store",
+            "node": "Pinecone: Upsert Vectors",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Pinecone Vector Store": {
+    "Pinecone: Upsert Vectors": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Webhook: Return Upsert Result",
             "type": "main",
             "index": 0
           }

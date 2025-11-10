@@ -16,7 +16,7 @@
         -16
       ],
       "id": "af3b717c-4108-466a-8279-7d902e7cd6e5",
-      "name": "Webhook",
+      "name": "Webhook: Receive Delete Request",
       "webhookId": "3038fca1-7713-47ab-a514-f5281381e8a8",
       "credentials": {
         "jwtAuth": {
@@ -54,7 +54,7 @@
         -16
       ],
       "id": "816f270b-a578-473d-b17a-97bbf247abd2",
-      "name": "HTTP Request",
+      "name": "HTTP: Delete Pinecone Namespace",
       "alwaysOutputData": true
     },
     {
@@ -72,27 +72,27 @@
         -16
       ],
       "id": "d2c3c1f3-351f-4b5f-a78f-6efe9b3190c0",
-      "name": "Respond to Webhook"
+      "name": "Webhook: Return Deletion Status"
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook": {
+    "Webhook: Receive Delete Request": {
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "HTTP: Delete Pinecone Namespace",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP Request": {
+    "HTTP: Delete Pinecone Namespace": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Webhook: Return Deletion Status",
             "type": "main",
             "index": 0
           }
