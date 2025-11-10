@@ -22,7 +22,7 @@
         "options": {}
       },
       "id": "extract-ids",
-      "name": "Extract Email IDs",
+      "name": "Set: Extract Email IDs",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
@@ -36,7 +36,7 @@
         "options": {}
       },
       "id": "loop-emails",
-      "name": "Loop Over Emails",
+      "name": "Split In Batches: Iterate Emails",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
@@ -49,7 +49,7 @@
         "jsCode": "// Works for 1 or many input items\nconst items = $input.all();\n\nconst decodeBody = (data) => {\n  if (!data) return '';\n  // Gmail uses URL-safe base64 (URL variant)\n  const norm = String(data).replace(/-/g, '+').replace(/_/g, '/');\n  try {\n    return Buffer.from(norm, 'base64').toString('utf-8');\n  } catch {\n    return '';\n  }\n};\n\nconst getHeader = (headers, name) => {\n  if (!Array.isArray(headers)) return '';\n  const h = headers.find(h => String(h.name || '').toLowerCase() === name.toLowerCase());\n  return h ? String(h.value || '') : '';\n};\n\n// Find first text/plain part (searches nested parts too)\nconst extractBody = (payload = {}) => {\n  const queue = [payload];\n  while (queue.length) {\n    const part = queue.shift();\n    if (part?.mimeType === 'text/plain' && part.body?.data) {\n      return decodeBody(part.body.data);\n    }\n    if (Array.isArray(part?.parts)) queue.push(...part.parts);\n  }\n  // Fallback to top-level body\n  if (payload.body?.data) return decodeBody(payload.body.data);\n  return '';\n};\n\nreturn items.map(item => {\n  const payload   = item.json?.payload || {};\n  const headers   = payload.headers || [];\n  const from      = getHeader(headers, 'From');\n  const subject   = getHeader(headers, 'Subject');\n  const snippet   = item.json?.snippet || '';\n  const body      = extractBody(payload).slice(0, 2000);\n\n  // NEW: carry over labelIds (always an array), and threadId for convenience\n  const labelIds  = Array.isArray(item.json?.labelIds) ? item.json.labelIds : [];\n  const threadId  = String(item.json?.threadId || '');\n\n  return {\n    json: {\n      messageId: String(item.json?.id || ''),\n      threadId,\n      from,\n      subject,\n      snippet,\n      body,\n      labelIds,   // <-- included as-is from the Gmail message\n    },\n  };\n});\n"
       },
       "id": "parse-email",
-      "name": "Parse Email Content",
+      "name": "Code: Parse Email Content",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -60,7 +60,7 @@
     {
       "parameters": {},
       "id": "loop-complete",
-      "name": "Loop Complete",
+      "name": "NoOp: Labeling Complete",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
@@ -73,9 +73,9 @@
         "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=in:inbox newer_than:20d (category:personal OR category:updates OR category:forums)\n\n",
         "jsonParameters": true,
         "options": {},
-        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Webhook').item.json.body.access_token }}\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Webhook: Receive Labeler Request').item.json.body.access_token }}\"\n}"
       },
-      "name": "List Messages for Context",
+      "name": "HTTP: Search Gmail Messages",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -89,9 +89,9 @@
         "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.email_ids }}?format=full&fields=id,threadId,labelIds,snippet,payload(headers(name,value),body(data),parts(body(data),mimeType,parts))",
         "jsonParameters": true,
         "options": {},
-        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Webhook').first().json.body.access_token }}\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Webhook: Receive Labeler Request').first().json.body.access_token }}\"\n}"
       },
-      "name": "Get Email Details",
+      "name": "HTTP: Fetch Email Body",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -129,7 +129,7 @@
         1184
       ],
       "id": "8f3e9a05-e37d-4b10-a49b-977bec8a3f9c",
-      "name": "Message a model",
+      "name": "OpenAI: Classify Email Label",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -149,7 +149,7 @@
         1120
       ],
       "id": "19c7e4e6-9834-410c-b90c-a03ca5b5bd3b",
-      "name": "Split Out"
+      "name": "Split Out: Expand Classification"
     },
     {
       "parameters": {
@@ -162,7 +162,7 @@
         1184
       ],
       "id": "32aa8177-256c-4da7-a4ae-213692cca04a",
-      "name": "Code in JavaScript"
+      "name": "Code: Format Label Response"
     },
     {
       "parameters": {
@@ -177,7 +177,7 @@
             {
               "id": "9e95a5ad-157d-42b5-b97e-4b1088052c6f",
               "name": "messageId",
-              "value": "={{ $('Code in JavaScript').item.json.messageId }}",
+              "value": "={{ $('Code: Format Label Response').item.json.messageId }}",
               "type": "string"
             }
           ]
@@ -191,7 +191,7 @@
         1184
       ],
       "id": "d00fae1a-a258-47d9-a326-4b965d4b3c9d",
-      "name": "Edit Fields"
+      "name": "Set: Prepare Label Update"
     },
     {
       "parameters": {
@@ -202,7 +202,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{ $('Webhook').first().json.body.access_token }}"
+              "value": "=Bearer {{ $('Webhook: Receive Labeler Request').first().json.body.access_token }}"
             }
           ]
         },
@@ -218,7 +218,7 @@
         1200
       ],
       "id": "94a83a18-86fd-4ce1-aca5-9872e8d464c6",
-      "name": "Apply Gmail Label P1"
+      "name": "HTTP: Apply Gmail Label"
     },
     {
       "parameters": {
@@ -227,7 +227,7 @@
             {
               "id": "1a79a580-5e3d-44d7-b0a4-435b7ee05fb9",
               "name": "access_token",
-              "value": "={{ $('Webhook').item.json.body.access_token }}",
+              "value": "={{ $('Webhook: Receive Labeler Request').item.json.body.access_token }}",
               "type": "string"
             },
             {
@@ -239,7 +239,7 @@
             {
               "id": "fe2de870-9641-4e0c-a4da-5890343a15fa",
               "name": "user_id",
-              "value": "={{ $('Webhook').item.json.body.user_id }}",
+              "value": "={{ $('Webhook: Receive Labeler Request').item.json.body.user_id }}",
               "type": "string"
             }
           ]
@@ -253,7 +253,7 @@
         864
       ],
       "id": "085607f2-ca2d-4cc3-b081-dd82f7d4d0af",
-      "name": "Set Label Id's"
+      "name": "Set: Map Label IDs"
     },
     {
       "parameters": {
@@ -290,7 +290,7 @@
         864
       ],
       "id": "6f62dd1c-8485-4400-9409-f1c110519813",
-      "name": "Create a row",
+      "name": "Supabase: Log Label Assignment",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -330,7 +330,7 @@
         992
       ],
       "id": "0c45c803-cb6a-4aa6-ab04-3204749d7073",
-      "name": "If1"
+      "name": "IF: Label Exists"
     },
     {
       "parameters": {
@@ -344,7 +344,7 @@
         864
       ],
       "id": "56183b14-dc1e-45f8-bf82-ae7f78e64e95",
-      "name": "Split Out lableId"
+      "name": "Split Out: Iterate Label IDs"
     },
     {
       "parameters": {
@@ -356,7 +356,7 @@
             {
               "keyName": "user_id",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').item.json.body.user_id }}"
+              "keyValue": "={{ $('Webhook: Receive Labeler Request').item.json.body.user_id }}"
             }
           ]
         }
@@ -368,7 +368,7 @@
         1488
       ],
       "id": "013b51a0-fcd7-4f06-82a5-8cb16a131ff2",
-      "name": "Check user_id",
+      "name": "Supabase: Fetch Label Mapping",
       "alwaysOutputData": true,
       "executeOnce": false,
       "retryOnFail": false,
@@ -390,7 +390,7 @@
             {
               "keyName": "user_id",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').first().json.body.user_id }}"
+              "keyValue": "={{ $('Webhook: Receive Labeler Request').first().json.body.user_id }}"
             }
           ]
         }
@@ -402,7 +402,7 @@
         1232
       ],
       "id": "534a1c0b-9581-4ad6-945c-1a4b9aeb9b3d",
-      "name": "Check user_id1",
+      "name": "Supabase: Verify Label Mapping",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
@@ -422,7 +422,7 @@
         1200
       ],
       "id": "064f64ff-50bc-430a-9172-fd3863f9f1dd",
-      "name": "Code Match LabelId"
+      "name": "Code: Match Existing Label"
     },
     {
       "parameters": {
@@ -449,7 +449,7 @@
         864
       ],
       "id": "a1799846-9716-418b-9b05-5c147a4488ab",
-      "name": "Create Gmail Label",
+      "name": "HTTP: Create Gmail Label",
       "retryOnFail": true
     },
     {
@@ -463,7 +463,7 @@
         864
       ],
       "id": "ebe47d74-c557-4812-9a86-1212726527a1",
-      "name": "Code labelId Color"
+      "name": "Code: Choose Label Color"
     },
     {
       "parameters": {},
@@ -474,7 +474,7 @@
         1104
       ],
       "id": "2b763f8f-5113-45d7-b263-ee11f32ecfed",
-      "name": "Merge"
+      "name": "Merge: Combine Label Data"
     },
     {
       "parameters": {
@@ -486,7 +486,7 @@
             {
               "keyName": "User ID",
               "condition": "eq",
-              "keyValue": "={{$('Webhook').first().json.body.user_id}}"
+              "keyValue": "={{$('Webhook: Receive Labeler Request').first().json.body.user_id}}"
             }
           ]
         }
@@ -498,7 +498,7 @@
         1312
       ],
       "id": "b9470c07-42a9-4b0b-b585-d8d0b5e6638b",
-      "name": "Get many rows",
+      "name": "Supabase: Fetch User Labels",
       "executeOnce": true,
       "credentials": {
         "supabaseApi": {
@@ -518,7 +518,7 @@
             },
             {
               "fieldId": "User ID",
-              "fieldValue": "={{$('Webhook').first().json.body.user_id}}"
+              "fieldValue": "={{$('Webhook: Receive Labeler Request').first().json.body.user_id}}"
             }
           ]
         }
@@ -530,7 +530,7 @@
         1200
       ],
       "id": "98795cd3-9b33-4417-8a17-aca6664c1704",
-      "name": "Create a row1",
+      "name": "Supabase: Store New Label",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -551,12 +551,12 @@
         1200
       ],
       "id": "dc7ee807-7f34-499e-a6ec-4f9ee4420dd1",
-      "name": "Webhook",
+      "name": "Webhook: Receive Labeler Request",
       "webhookId": "6b9311d1-a9f5-41a5-9cd6-e53e85e3dd61"
     },
     {
       "parameters": {
-        "jsCode": "// Read array from \"Extract Email IDs\" (single item with email_ids[])\nconst allIds = ($items(\"Extract Email IDs\")[0]?.json?.email_ids ?? []).map(String);\n\n// Read IDs already stored in Supabase from \"Get many rows\" (multiple items)\nconst existingIds = $items(\"Get many rows\")\n  .map(i => i.json?.ID ?? i.json?.id)\n  .filter(v => v !== undefined && v !== null)\n  .map(String);\n\n// Build a fast lookup set of existing IDs\nconst existingSet = new Set(existingIds);\n\n// Deduplicate input and keep only those NOT in Supabase\nconst toInsert = Array.from(new Set(allIds)).filter(id => !existingSet.has(id));\n\n// Output in the same shape as \"Extract Email IDs\"\nreturn [\n  {\n    json: {\n      email_ids: toInsert\n    }\n  }\n];\n"
+        "jsCode": "// Read array from \"Extract Email IDs\" (single item with email_ids[])\nconst allIds = ($items(\"Set: Extract Email IDs\")[0]?.json?.email_ids ?? []).map(String);\n\n// Read IDs already stored in Supabase from \"Get many rows\" (multiple items)\nconst existingIds = $items(\"Supabase: Fetch User Labels\")\n  .map(i => i.json?.ID ?? i.json?.id)\n  .filter(v => v !== undefined && v !== null)\n  .map(String);\n\n// Build a fast lookup set of existing IDs\nconst existingSet = new Set(existingIds);\n\n// Deduplicate input and keep only those NOT in Supabase\nconst toInsert = Array.from(new Set(allIds)).filter(id => !existingSet.has(id));\n\n// Output in the same shape as \"Extract Email IDs\"\nreturn [\n  {\n    json: {\n      email_ids: toInsert\n    }\n  }\n];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -565,7 +565,7 @@
         1120
       ],
       "id": "3908ac70-91d7-4420-919a-dcbbe364b530",
-      "name": "Code in JavaScript1"
+      "name": "Code: Prepare Response"
     },
     {
       "parameters": {},
@@ -576,7 +576,7 @@
         1120
       ],
       "id": "e9b25166-5326-4697-a314-96ac7a33f680",
-      "name": "Merge1"
+      "name": "Merge: Attach Response Payload"
     },
     {
       "parameters": {
@@ -589,7 +589,7 @@
         "jsonBody": "{\n  \"used\": true\n}",
         "options": {}
       },
-      "name": "Supabase: labelId list — PATCH1",
+      "name": "HTTP: Update Label Cache",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -602,298 +602,298 @@
   ],
   "pinData": {},
   "connections": {
-    "Extract Email IDs": {
+    "Set: Extract Email IDs": {
       "main": [
         [
           {
-            "node": "Get many rows",
+            "node": "Supabase: Fetch User Labels",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Merge1",
+            "node": "Merge: Attach Response Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Loop Over Emails": {
+    "Split In Batches: Iterate Emails": {
       "main": [
         [
           {
-            "node": "Loop Complete",
+            "node": "NoOp: Labeling Complete",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Get Email Details",
+            "node": "HTTP: Fetch Email Body",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Parse Email Content": {
+    "Code: Parse Email Content": {
       "main": [
         [
           {
-            "node": "Message a model",
+            "node": "OpenAI: Classify Email Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "List Messages for Context": {
+    "HTTP: Search Gmail Messages": {
       "main": [
         [
           {
-            "node": "Extract Email IDs",
+            "node": "Set: Extract Email IDs",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Email Details": {
+    "HTTP: Fetch Email Body": {
       "main": [
         [
           {
-            "node": "Parse Email Content",
+            "node": "Code: Parse Email Content",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Message a model": {
+    "OpenAI: Classify Email Label": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Code: Format Label Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split Out": {
+    "Split Out: Expand Classification": {
       "main": [
         [
           {
-            "node": "Loop Over Emails",
+            "node": "Split In Batches: Iterate Emails",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript": {
+    "Code: Format Label Response": {
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Set: Prepare Label Update",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields": {
+    "Set: Prepare Label Update": {
       "main": [
         [
           {
-            "node": "Check user_id1",
+            "node": "Supabase: Verify Label Mapping",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Merge",
+            "node": "Merge: Combine Label Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Apply Gmail Label P1": {
+    "HTTP: Apply Gmail Label": {
       "main": [
         [
           {
-            "node": "Loop Over Emails",
+            "node": "Split In Batches: Iterate Emails",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Create a row1",
+            "node": "Supabase: Store New Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set Label Id's": {
+    "Set: Map Label IDs": {
       "main": [
         [
           {
-            "node": "Split Out lableId",
+            "node": "Split Out: Iterate Label IDs",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If1": {
+    "IF: Label Exists": {
       "main": [
         [
           {
-            "node": "Set Label Id's",
+            "node": "Set: Map Label IDs",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "List Messages for Context",
+            "node": "HTTP: Search Gmail Messages",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split Out lableId": {
+    "Split Out: Iterate Label IDs": {
       "main": [
         [
           {
-            "node": "Code labelId Color",
+            "node": "Code: Choose Label Color",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check user_id": {
+    "Supabase: Fetch Label Mapping": {
       "main": [
         []
       ]
     },
-    "Check user_id1": {
+    "Supabase: Verify Label Mapping": {
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Merge: Combine Label Data",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Code Match LabelId": {
+    "Code: Match Existing Label": {
       "main": [
         [
           {
-            "node": "Apply Gmail Label P1",
+            "node": "HTTP: Apply Gmail Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create Gmail Label": {
+    "HTTP: Create Gmail Label": {
       "main": [
         [
           {
-            "node": "Create a row",
+            "node": "Supabase: Log Label Assignment",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code labelId Color": {
+    "Code: Choose Label Color": {
       "main": [
         [
           {
-            "node": "Create Gmail Label",
+            "node": "HTTP: Create Gmail Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge": {
+    "Merge: Combine Label Data": {
       "main": [
         [
           {
-            "node": "Code Match LabelId",
+            "node": "Code: Match Existing Label",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get many rows": {
+    "Supabase: Fetch User Labels": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Merge: Attach Response Payload",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Webhook": {
+    "Webhook: Receive Labeler Request": {
       "main": [
         [
           {
-            "node": "Supabase: labelId list — PATCH1",
+            "node": "HTTP: Update Label Cache",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge1": {
+    "Merge: Attach Response Payload": {
       "main": [
         [
           {
-            "node": "Code in JavaScript1",
+            "node": "Code: Prepare Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript1": {
+    "Code: Prepare Response": {
       "main": [
         [
           {
-            "node": "Split Out",
+            "node": "Split Out: Expand Classification",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase: labelId list — PATCH1": {
+    "HTTP: Update Label Cache": {
       "main": [
         [
           {
-            "node": "If1",
+            "node": "IF: Label Exists",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create a row": {
+    "Supabase: Log Label Assignment": {
       "main": [
         [
           {
-            "node": "List Messages for Context",
+            "node": "HTTP: Search Gmail Messages",
             "type": "main",
             "index": 0
           }

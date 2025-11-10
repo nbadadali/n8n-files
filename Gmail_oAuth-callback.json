@@ -7,7 +7,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "name": "Webhook: /oauth/callback",
+      "name": "Webhook: Handle OAuth Callback",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
@@ -25,7 +25,7 @@
         "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\"\n}",
         "options": {}
       },
-      "name": "Supabase: Get oauth_state by state",
+      "name": "HTTP: Fetch OAuth State",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -47,7 +47,7 @@
         "jsonBody": "{\n  \"used\": true\n}",
         "options": {}
       },
-      "name": "Supabase: Mark state used",
+      "name": "HTTP: Mark State Consumed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -86,7 +86,7 @@
         },
         "options": {}
       },
-      "name": "Supabase: Upsert user",
+      "name": "HTTP: Upsert User Credentials",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -98,12 +98,12 @@
     {
       "parameters": {
         "respondWith": "redirect",
-        "redirectURL": "={{$env.CHROME_EXTENSION_REDIRECT_URL}}/?jwt_token={{ $json.jwt }}&user_id={{ $json.userId }}&state={{ $('Webhook: /oauth/callback').item.json.query.state }}",
+        "redirectURL": "={{$env.CHROME_EXTENSION_REDIRECT_URL}}/?jwt_token={{ $json.jwt }}&user_id={{ $json.userId }}&state={{ $('Webhook: Handle OAuth Callback').item.json.query.state }}",
         "options": {
           "responseCode": 302
         }
       },
-      "name": "Respond: 302 → extension",
+      "name": "Webhook: Redirect to Extension",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
@@ -120,7 +120,7 @@
           "responseCode": 400
         }
       },
-      "name": "Respond: 400 invalid_state",
+      "name": "Webhook: Return Invalid State",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
@@ -138,7 +138,7 @@
           "parameter": [
             {
               "name": "code",
-              "value": "={{ $('Webhook: /oauth/callback').item.json.query.code }}"
+              "value": "={{ $('Webhook: Handle OAuth Callback').item.json.query.code }}"
             },
             {
               "name": "client_id",
@@ -171,7 +171,7 @@
           ]
         }
       },
-      "name": "HTTP: Exchange code → tokens",
+      "name": "HTTP: Exchange Code for Tokens",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -192,7 +192,7 @@
         272
       ],
       "id": "c82d36f7-d05b-4cc8-86b6-fb32adbf9d7b",
-      "name": "Code: Decode id_token"
+      "name": "Code: Decode Google ID Token"
     },
     {
       "parameters": {
@@ -201,19 +201,19 @@
             {
               "id": "9d8d10ef-8ecf-4d91-9c2d-06269addbd25",
               "name": "access_token",
-              "value": "={{ $('HTTP: Exchange code → tokens').item.json.access_token }}",
+              "value": "={{ $('HTTP: Exchange Code for Tokens').item.json.access_token }}",
               "type": "string"
             },
             {
               "id": "a1ff3f11-787b-4a91-8ce2-ab15be07f160",
               "name": "refresh_token",
-              "value": "={{ $('HTTP: Exchange code → tokens').item.json.refresh_token }}",
+              "value": "={{ $('HTTP: Exchange Code for Tokens').item.json.refresh_token }}",
               "type": "string"
             },
             {
               "id": "91c97189-c922-4335-a0bc-30a42adcc93d",
               "name": "expires_in",
-              "value": "={{ $('HTTP: Exchange code → tokens').item.json.expires_in }}",
+              "value": "={{ $('HTTP: Exchange Code for Tokens').item.json.expires_in }}",
               "type": "string"
             },
             {
@@ -245,7 +245,7 @@
         272
       ],
       "id": "8d74e43a-2a30-47fd-952c-21b6a133de73",
-      "name": "Edit Fields"
+      "name": "Set: Prepare OAuth Response"
     },
     {
       "parameters": {
@@ -279,11 +279,11 @@
         368
       ],
       "id": "88ac4e40-b0ef-4d2d-b4b8-162436e3b852",
-      "name": "IF: state exists"
+      "name": "IF: Valid OAuth State"
     },
     {
       "parameters": {
-        "jsCode": "function b64url(input) {\n  return Buffer.from(JSON.stringify(input))\n    .toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\n// Current timestamp in seconds\nconst now = Math.floor(Date.now() / 1000);\n\nconst sub = $('Edit Fields').first().json.user_id;\nconst email = $('Edit Fields').first().json.email || null;\n\n// JWT header & payload\nconst header = { alg: 'HS256', typ: 'JWT' };\nconst payload = {\n  sub,\n  email,\n  scope: ['chat:read', 'chat:write'],\n  iat: now,\n  exp: now + 600, // 10 min expiry\n};\n\n// base64url encode\nconst h = b64url(header);\nconst p = b64url(payload);\n\nreturn [\n  {\n    json: {\n      header_b64: h,\n      payload_b64: p,\n      signing_input: `${h}.${p}`,\n      sub,\n    },\n  },\n];\n"
+        "jsCode": "function b64url(input) {\n  return Buffer.from(JSON.stringify(input))\n    .toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\n// Current timestamp in seconds\nconst now = Math.floor(Date.now() / 1000);\n\nconst sub = $('Set: Prepare OAuth Response').first().json.user_id;\nconst email = $('Set: Prepare OAuth Response').first().json.email || null;\n\n// JWT header & payload\nconst header = { alg: 'HS256', typ: 'JWT' };\nconst payload = {\n  sub,\n  email,\n  scope: ['chat:read', 'chat:write'],\n  iat: now,\n  exp: now + 600, // 10 min expiry\n};\n\n// base64url encode\nconst h = b64url(header);\nconst p = b64url(payload);\n\nreturn [\n  {\n    json: {\n      header_b64: h,\n      payload_b64: p,\n      signing_input: `${h}.${p}`,\n      sub,\n    },\n  },\n];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -292,14 +292,14 @@
         176
       ],
       "id": "365da9bc-b105-4147-8d8a-65193510fd22",
-      "name": "Code: Build JWT Header & Payload"
+      "name": "Code: Build Session JWT Payload"
     },
     {
       "parameters": {
         "action": "hmac",
         "type": "SHA256",
         "value": "={{ $json.signing_input }}",
-        "secret": "={{ $('Edit Fields').first().json.N8N_JWT_SECRET }}",
+        "secret": "={{ $('Set: Prepare OAuth Response').first().json.N8N_JWT_SECRET }}",
         "encoding": "base64"
       },
       "type": "n8n-nodes-base.crypto",
@@ -309,7 +309,7 @@
         176
       ],
       "id": "6cee339a-fcac-40a1-8f5e-a2e689b31cda",
-      "name": "Crypto: Sign JWT"
+      "name": "Crypto: Sign Session JWT"
     },
     {
       "parameters": {
@@ -322,7 +322,7 @@
         176
       ],
       "id": "459a1194-4887-4f51-b578-5138e89bff24",
-      "name": "Code: base64url"
+      "name": "Code: Base64URL Encode JWT"
     },
     {
       "parameters": {
@@ -346,7 +346,7 @@
         272
       ],
       "id": "aea7f03b-c34a-4e99-b1fc-7ffdf96b873d",
-      "name": "User verification",
+      "name": "Supabase: Verify User",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
@@ -387,7 +387,7 @@
         272
       ],
       "id": "3fd3e352-55cb-4745-b03f-168137568947",
-      "name": "If"
+      "name": "IF: OAuth Success"
     },
     {
       "parameters": {
@@ -404,11 +404,11 @@
         368
       ],
       "id": "f542a1e4-703e-4b19-8582-f20e5a70f90e",
-      "name": "Respond to Webhook"
+      "name": "Webhook: Return OAuth Result"
     }
   ],
   "pinData": {
-    "Webhook: /oauth/callback": [
+    "Webhook: Handle OAuth Callback": [
       {
         "json": {
           "headers": {
@@ -451,157 +451,157 @@
     ]
   },
   "connections": {
-    "Webhook: /oauth/callback": {
+    "Webhook: Handle OAuth Callback": {
       "main": [
         [
           {
-            "node": "Supabase: Get oauth_state by state",
+            "node": "HTTP: Fetch OAuth State",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase: Get oauth_state by state": {
+    "HTTP: Fetch OAuth State": {
       "main": [
         [
           {
-            "node": "IF: state exists",
+            "node": "IF: Valid OAuth State",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase: Mark state used": {
+    "HTTP: Mark State Consumed": {
       "main": [
         [
           {
-            "node": "HTTP: Exchange code → tokens",
+            "node": "HTTP: Exchange Code for Tokens",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase: Upsert user": {
+    "HTTP: Upsert User Credentials": {
       "main": [
         [
           {
-            "node": "User verification",
+            "node": "Supabase: Verify User",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP: Exchange code → tokens": {
+    "HTTP: Exchange Code for Tokens": {
       "main": [
         [
           {
-            "node": "Code: Decode id_token",
+            "node": "Code: Decode Google ID Token",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code: Decode id_token": {
+    "Code: Decode Google ID Token": {
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Set: Prepare OAuth Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields": {
+    "Set: Prepare OAuth Response": {
       "main": [
         [
           {
-            "node": "Supabase: Upsert user",
+            "node": "HTTP: Upsert User Credentials",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IF: state exists": {
+    "IF: Valid OAuth State": {
       "main": [
         [
           {
-            "node": "Supabase: Mark state used",
+            "node": "HTTP: Mark State Consumed",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Respond: 400 invalid_state",
+            "node": "Webhook: Return Invalid State",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code: Build JWT Header & Payload": {
+    "Code: Build Session JWT Payload": {
       "main": [
         [
           {
-            "node": "Crypto: Sign JWT",
+            "node": "Crypto: Sign Session JWT",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Crypto: Sign JWT": {
+    "Crypto: Sign Session JWT": {
       "main": [
         [
           {
-            "node": "Code: base64url",
+            "node": "Code: Base64URL Encode JWT",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code: base64url": {
+    "Code: Base64URL Encode JWT": {
       "main": [
         [
           {
-            "node": "Respond: 302 → extension",
+            "node": "Webhook: Redirect to Extension",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "User verification": {
+    "Supabase: Verify User": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "IF: OAuth Success",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If": {
+    "IF: OAuth Success": {
       "main": [
         [
           {
-            "node": "Code: Build JWT Header & Payload",
+            "node": "Code: Build Session JWT Payload",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Webhook: Return OAuth Result",
             "type": "main",
             "index": 0
           }

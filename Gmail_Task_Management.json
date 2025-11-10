@@ -16,7 +16,7 @@
         224
       ],
       "id": "0acd0f64-f237-4fc9-9c8f-3deb4bf65715",
-      "name": "Webhook",
+      "name": "Webhook: Receive Task Command",
       "webhookId": "d5c3a514-9b33-4b12-9263-238cf99c265f",
       "credentials": {
         "jwtAuth": {
@@ -39,7 +39,7 @@
                 },
                 "conditions": [
                   {
-                    "leftValue": "={{ $('Webhook').item.json.body.context }}",
+                    "leftValue": "={{ $('Webhook: Receive Task Command').item.json.body.context }}",
                     "rightValue": "ExtractTasksList",
                     "operator": {
                       "type": "string",
@@ -62,7 +62,7 @@
                 "conditions": [
                   {
                     "id": "11b82cdb-ef3b-4cd7-993d-037c8ce221bf",
-                    "leftValue": "={{ $('Webhook').item.json.body.context }}",
+                    "leftValue": "={{ $('Webhook: Receive Task Command').item.json.body.context }}",
                     "rightValue": "DeleteTask",
                     "operator": {
                       "type": "string",
@@ -85,7 +85,7 @@
                 "conditions": [
                   {
                     "id": "b097ff51-03a9-4b4b-97ce-8ff7cb699685",
-                    "leftValue": "={{ $('Webhook').item.json.body.context }}",
+                    "leftValue": "={{ $('Webhook: Receive Task Command').item.json.body.context }}",
                     "rightValue": "ManualTaskAddition",
                     "operator": {
                       "type": "string",
@@ -108,7 +108,7 @@
         208
       ],
       "id": "30b61498-f6cc-458d-a131-84d9c61fde38",
-      "name": "Switch"
+      "name": "Switch: Route Task Intent"
     },
     {
       "parameters": {
@@ -136,7 +136,7 @@
           ]
         }
       },
-      "name": "Exchange Refresh Token",
+      "name": "HTTP: Refresh Gmail Token",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -154,7 +154,7 @@
             {
               "keyName": "user_id",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').item.json.body.userId }}"
+              "keyValue": "={{ $('Webhook: Receive Task Command').item.json.body.userId }}"
             }
           ]
         }
@@ -166,7 +166,7 @@
         224
       ],
       "id": "1931c6b8-fc5d-4c50-93bf-6baaa4441aa5",
-      "name": "Get User ID",
+      "name": "Supabase: Lookup Task User",
       "alwaysOutputData": false,
       "credentials": {
         "supabaseApi": {
@@ -196,7 +196,7 @@
         224
       ],
       "id": "1d4b353a-0c5c-41b0-a28d-815c07f066db",
-      "name": "Set Access Token"
+      "name": "Set: Inject Access Token"
     },
     {
       "parameters": {
@@ -205,7 +205,7 @@
         "options": {},
         "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n}"
       },
-      "name": "List Inbox Emails",
+      "name": "HTTP: List Inbox Messages",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -225,7 +225,7 @@
             {
               "keyName": "user_id",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').item.json.body.userId }}"
+              "keyValue": "={{ $('Webhook: Receive Task Command').item.json.body.userId }}"
             }
           ]
         }
@@ -237,7 +237,7 @@
         -80
       ],
       "id": "ff451261-2f4b-4961-bc63-59709ae6a5c3",
-      "name": "Id Compare Supabase",
+      "name": "Supabase: Compare Task IDs",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
@@ -253,15 +253,15 @@
           "fieldValues": [
             {
               "fieldId": "user_id",
-              "fieldValue": "={{ $('Webhook').item.json.body.userId }}"
+              "fieldValue": "={{ $('Webhook: Receive Task Command').item.json.body.userId }}"
             },
             {
               "fieldId": "task",
-              "fieldValue": "={{ $('Webhook').item.json.body.taskName }}"
+              "fieldValue": "={{ $('Webhook: Receive Task Command').item.json.body.taskName }}"
             },
             {
               "fieldId": "priority",
-              "fieldValue": "={{ $('Webhook').item.json.body.priority }}"
+              "fieldValue": "={{ $('Webhook: Receive Task Command').item.json.body.priority }}"
             },
             {
               "fieldId": "tag",
@@ -269,7 +269,7 @@
             },
             {
               "fieldId": "sender",
-              "fieldValue": "={{ $('Webhook').item.json.body.from }}"
+              "fieldValue": "={{ $('Webhook: Receive Task Command').item.json.body.from }}"
             }
           ]
         }
@@ -281,7 +281,7 @@
         320
       ],
       "id": "1bce45f3-013e-4fee-b69d-f7c13c3162a5",
-      "name": "Create a row",
+      "name": "Supabase: Create Task Record",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -298,7 +298,7 @@
             {
               "keyName": "task",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').item.json.body.taskName }}"
+              "keyValue": "={{ $('Webhook: Receive Task Command').item.json.body.taskName }}"
             }
           ]
         }
@@ -310,7 +310,7 @@
         128
       ],
       "id": "ff0dce19-cd64-409e-b021-09ea86302a44",
-      "name": "Delete a row",
+      "name": "Supabase: Delete Task Record",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -333,7 +333,7 @@
         128
       ],
       "id": "34d969e5-efc4-4e44-8d30-c60f0aa15721",
-      "name": "Respond to Webhook"
+      "name": "Webhook: Return Task Result"
     },
     {
       "parameters": {
@@ -348,11 +348,11 @@
         320
       ],
       "id": "4b00c4cf-c96e-4126-9423-574e4af4da90",
-      "name": "Respond to Webhook1"
+      "name": "Webhook: Return Unsupported Intent"
     },
     {
       "parameters": {
-        "jsCode": "const gmailMessages = $items(\"List Inbox Emails\")[0].json.messages;\nconst supabaseRows = $items(\"Id Compare Supabase\");\n\n// Build a Set for fast lookup of saved IDs\nconst savedIds = new Set(supabaseRows.map(row => row.json.id));\n\nconsole.log(JSON.stringify(gmailMessages, null, 2));\n\n// Only keep Gmail messages whose id is NOT in Supabase\nconst newMessages = gmailMessages.filter(msg => !savedIds.has(msg.id));\n\n// If no new messages → return [] (not [{}])\nif (!newMessages.length) {\n  return [];\n}\n\n// Otherwise, return items\nreturn newMessages.map(msg => ({ json: msg }));\n"
+        "jsCode": "const gmailMessages = $items(\"HTTP: List Inbox Messages\")[0].json.messages;\nconst supabaseRows = $items(\"Supabase: Compare Task IDs\");\n\n// Build a Set for fast lookup of saved IDs\nconst savedIds = new Set(supabaseRows.map(row => row.json.id));\n\nconsole.log(JSON.stringify(gmailMessages, null, 2));\n\n// Only keep Gmail messages whose id is NOT in Supabase\nconst newMessages = gmailMessages.filter(msg => !savedIds.has(msg.id));\n\n// If no new messages → return [] (not [{}])\nif (!newMessages.length) {\n  return [];\n}\n\n// Otherwise, return items\nreturn newMessages.map(msg => ({ json: msg }));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -361,7 +361,7 @@
         -80
       ],
       "id": "03acf842-aa4f-453a-94e5-c86fc90a6856",
-      "name": "Code",
+      "name": "Code: Build Task Prompt",
       "alwaysOutputData": true,
       "onError": "continueErrorOutput"
     },
@@ -370,9 +370,9 @@
         "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}?format=full",
         "jsonParameters": true,
         "options": {},
-        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Set Access Token').first().json.access_token }}\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Set: Inject Access Token').first().json.access_token }}\"\n}"
       },
-      "name": "Get Message Details",
+      "name": "HTTP: Fetch Task Email",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -410,7 +410,7 @@
         -288
       ],
       "id": "34a56841-666f-4816-8a3e-c798917435db",
-      "name": "Message a model1",
+      "name": "OpenAI: Draft Task Reply",
       "notesInFlow": false,
       "credentials": {
         "openAiApi": {
@@ -430,7 +430,7 @@
         -288
       ],
       "id": "522503e7-9823-4af3-90e0-b29d16eb2c04",
-      "name": "Code6"
+      "name": "Code: Prepare Reply Metadata"
     },
     {
       "parameters": {
@@ -443,7 +443,7 @@
         -288
       ],
       "id": "c42168f7-3c6c-430f-b838-eb132f55a24f",
-      "name": "Code - decode base64"
+      "name": "Code: Decode Gmail Payload"
     },
     {
       "parameters": {
@@ -452,7 +452,7 @@
           "fieldValues": [
             {
               "fieldId": "user_id",
-              "fieldValue": "={{ $('Webhook').first().json.body.userId }}"
+              "fieldValue": "={{ $('Webhook: Receive Task Command').first().json.body.userId }}"
             },
             {
               "fieldId": "task",
@@ -480,7 +480,7 @@
         -288
       ],
       "id": "659094d7-1a0e-487c-be48-0227f7d46306",
-      "name": "Create a row1",
+      "name": "Supabase: Log Task Outcome",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -499,7 +499,7 @@
         -288
       ],
       "id": "30de14db-9b59-447e-87ca-47e05671f68b",
-      "name": "Code1",
+      "name": "Code: Build Manual Task Entry",
       "alwaysOutputData": true
     },
     {
@@ -509,7 +509,7 @@
           "fieldValues": [
             {
               "fieldId": "user_id",
-              "fieldValue": "={{ $('Webhook').first().json.body.userId }}"
+              "fieldValue": "={{ $('Webhook: Receive Task Command').first().json.body.userId }}"
             },
             {
               "fieldId": "id",
@@ -525,7 +525,7 @@
         -464
       ],
       "id": "cc1fe1ff-ca56-4a9e-9a06-d722751edd40",
-      "name": "Create a row2",
+      "name": "Supabase: Store Manual Task",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -543,7 +543,7 @@
             {
               "keyName": "user_id",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').first().json.body.userId }}"
+              "keyValue": "={{ $('Webhook: Receive Task Command').first().json.body.userId }}"
             }
           ]
         }
@@ -555,7 +555,7 @@
         128
       ],
       "id": "63c64711-74e0-4816-932a-e0d59fed51c9",
-      "name": "Get many rows",
+      "name": "Supabase: Fetch Tasks",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -575,7 +575,7 @@
         128
       ],
       "id": "61e4f370-041b-4a36-a5a3-c2d7f5d95b5b",
-      "name": "Respond to Webhook2"
+      "name": "Webhook: Return Task List"
     },
     {
       "parameters": {
@@ -609,7 +609,7 @@
         -256
       ],
       "id": "85ad731c-9816-4548-adca-4dcc65ee9ac2",
-      "name": "If"
+      "name": "IF: Has Task Parameters"
     },
     {
       "parameters": {
@@ -622,7 +622,7 @@
         128
       ],
       "id": "8a907a22-dd60-4139-beaa-fc0f71066274",
-      "name": "Code2"
+      "name": "Code: Format Extraction Result"
     },
     {
       "parameters": {
@@ -635,7 +635,7 @@
         -272
       ],
       "id": "8042e593-a75e-4d27-bbe9-a4e5d54f8146",
-      "name": "Code in JavaScript",
+      "name": "Code: Prepare Delete Payload",
       "alwaysOutputData": true
     },
     {
@@ -670,11 +670,11 @@
         -272
       ],
       "id": "238d9b07-b8ff-4465-b2aa-4377790ac795",
-      "name": "If1"
+      "name": "IF: Has Manual Task Data"
     }
   ],
   "pinData": {
-    "Webhook": [
+    "Webhook: Receive Task Command": [
       {
         "json": {
           "headers": {
@@ -726,269 +726,269 @@
     ]
   },
   "connections": {
-    "Webhook": {
+    "Webhook: Receive Task Command": {
       "main": [
         [
           {
-            "node": "Get User ID",
+            "node": "Supabase: Lookup Task User",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch": {
+    "Switch: Route Task Intent": {
       "main": [
         [
           {
-            "node": "List Inbox Emails",
+            "node": "HTTP: List Inbox Messages",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Delete a row",
+            "node": "Supabase: Delete Task Record",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Create a row",
+            "node": "Supabase: Create Task Record",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Exchange Refresh Token": {
+    "HTTP: Refresh Gmail Token": {
       "main": [
         [
           {
-            "node": "Set Access Token",
+            "node": "Set: Inject Access Token",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get User ID": {
+    "Supabase: Lookup Task User": {
       "main": [
         [
           {
-            "node": "Exchange Refresh Token",
+            "node": "HTTP: Refresh Gmail Token",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set Access Token": {
+    "Set: Inject Access Token": {
       "main": [
         [
           {
-            "node": "Switch",
+            "node": "Switch: Route Task Intent",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "List Inbox Emails": {
+    "HTTP: List Inbox Messages": {
       "main": [
         [
           {
-            "node": "Id Compare Supabase",
+            "node": "Supabase: Compare Task IDs",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Delete a row": {
+    "Supabase: Delete Task Record": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Webhook: Return Task Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create a row": {
+    "Supabase: Create Task Record": {
       "main": [
         [
           {
-            "node": "Respond to Webhook1",
+            "node": "Webhook: Return Unsupported Intent",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Id Compare Supabase": {
+    "Supabase: Compare Task IDs": {
       "main": [
         [
           {
-            "node": "Code",
+            "node": "Code: Build Task Prompt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Message Details": {
+    "HTTP: Fetch Task Email": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Code: Prepare Delete Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Message a model1": {
+    "OpenAI: Draft Task Reply": {
       "main": [
         [
           {
-            "node": "Code1",
+            "node": "Code: Build Manual Task Entry",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code6": {
+    "Code: Prepare Reply Metadata": {
       "main": [
         [
           {
-            "node": "Message a model1",
+            "node": "OpenAI: Draft Task Reply",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code - decode base64": {
+    "Code: Decode Gmail Payload": {
       "main": [
         [
           {
-            "node": "Code6",
+            "node": "Code: Prepare Reply Metadata",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code": {
+    "Code: Build Task Prompt": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "IF: Has Task Parameters",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code1": {
+    "Code: Build Manual Task Entry": {
       "main": [
         [
           {
-            "node": "Create a row1",
+            "node": "Supabase: Log Task Outcome",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create a row1": {
+    "Supabase: Log Task Outcome": {
       "main": [
         [
           {
-            "node": "Get many rows",
+            "node": "Supabase: Fetch Tasks",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get many rows": {
+    "Supabase: Fetch Tasks": {
       "main": [
         [
           {
-            "node": "Code2",
+            "node": "Code: Format Extraction Result",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If": {
+    "IF: Has Task Parameters": {
       "main": [
         [
           {
-            "node": "Get Message Details",
+            "node": "HTTP: Fetch Task Email",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Create a row2",
+            "node": "Supabase: Store Manual Task",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Get many rows",
+            "node": "Supabase: Fetch Tasks",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code2": {
+    "Code: Format Extraction Result": {
       "main": [
         [
           {
-            "node": "Respond to Webhook2",
+            "node": "Webhook: Return Task List",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Create a row2": {
+    "Supabase: Store Manual Task": {
       "main": [
         []
       ]
     },
-    "Code in JavaScript": {
+    "Code: Prepare Delete Payload": {
       "main": [
         [
           {
-            "node": "If1",
+            "node": "IF: Has Manual Task Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If1": {
+    "IF: Has Manual Task Data": {
       "main": [
         [
           {
-            "node": "Code - decode base64",
+            "node": "Code: Decode Gmail Payload",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Get many rows",
+            "node": "Supabase: Fetch Tasks",
             "type": "main",
             "index": 0
           }

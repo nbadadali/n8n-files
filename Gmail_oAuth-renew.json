@@ -6,7 +6,7 @@
         "jsCode": "\n// Parse Authorization header and prepare signing_input for HMAC verify (no crypto here)\nfunction b64urlDecode(str){\n  str = (str || '').replace(/-/g,'+').replace(/_/g,'/');\n  const pad = str.length % 4; if (pad) str += '='.repeat(4-pad);\n  try {\n    return Buffer.from(str, 'base64').toString('utf8');\n  } catch (e) {\n    return null;\n  }\n}\nconst headers = $json.headers || {};\nconst auth = headers.authorization || headers.Authorization || '';\nif (!auth.startsWith('Bearer ')) {\n  return [{ json: { ok: false, error: 'missing_authorization' } }];\n}\nconst token = auth.slice(7).trim();\nconst parts = token.split('.');\nif (parts.length !== 3) {\n  return [{ json: { ok: false, error: 'malformed_jwt' } }];\n}\nconst [h, p, s] = parts;\nconst headerJson = b64urlDecode(h);\nconst payloadJson = b64urlDecode(p);\nif (!headerJson || !payloadJson) {\n  return [{ json: { ok: false, error: 'bad_jwt_parts' } }];\n}\nlet header, payload;\ntry { header = JSON.parse(headerJson); } catch { header = null; }\ntry { payload = JSON.parse(payloadJson); } catch { payload = null; }\nif (!header || !payload) {\n  return [{ json: { ok: false, error: 'bad_jwt_json' } }];\n}\nif (header.alg !== 'HS256') {\n  // Only support HS256 like the callback flow\n  return [{ json: { ok: false, error: 'unsupported_alg' } }];\n}\nconst sub = payload.sub || null;\nif (!sub) {\n  return [{ json: { ok: false, error: 'missing_sub' } }];\n}\nreturn [{\n  json: {\n    ok: true,\n    header_b64: h,\n    payload_b64: p,\n    signature_b64url: s,\n    signing_input: `${h}.${p}`,\n    sub,\n    email: payload.email || null\n  }\n}];\n"
       },
       "id": "662c0b0c-75d7-42bd-8370-52fb4691c6ee",
-      "name": "Code: Parse JWT",
+      "name": "Code: Parse Existing JWT",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -23,7 +23,7 @@
         "encoding": "base64"
       },
       "id": "78693bcf-152e-4723-8f7f-6ef4d52b2253",
-      "name": "Crypto: HMAC verify",
+      "name": "Crypto: Verify JWT HMAC",
       "type": "n8n-nodes-base.crypto",
       "typeVersion": 1,
       "position": [
@@ -33,10 +33,10 @@
     },
     {
       "parameters": {
-        "jsCode": "\n// Convert base64 to base64url and compare with provided signature\nfunction toB64Url(b64){\n  return (b64 || '')\n    .replace(/=/g,'')\n    .replace(/\\+/g,'-')\n    .replace(/\\//g,'_');\n}\nconst expectedSigUrl = toB64Url($json.data);\nconst provided = $items('Code: Parse JWT')[0].json.signature_b64url;\nconst ok = expectedSigUrl === provided;\n\nreturn [{\n  json: {\n    ok,\n    sub: $items('Code: Parse JWT')[0].json.sub,\n    email: $items('Code: Parse JWT')[0].json.email || null\n  }\n}];\n"
+        "jsCode": "\n// Convert base64 to base64url and compare with provided signature\nfunction toB64Url(b64){\n  return (b64 || '')\n    .replace(/=/g,'')\n    .replace(/\\+/g,'-')\n    .replace(/\\//g,'_');\n}\nconst expectedSigUrl = toB64Url($json.data);\nconst provided = $items('Code: Parse Existing JWT')[0].json.signature_b64url;\nconst ok = expectedSigUrl === provided;\n\nreturn [{\n  json: {\n    ok,\n    sub: $items('Code: Parse Existing JWT')[0].json.sub,\n    email: $items('Code: Parse Existing JWT')[0].json.email || null\n  }\n}];\n"
       },
       "id": "eb067aa5-805c-4d90-88c3-2fac3eadc4eb",
-      "name": "Code: Compare signature",
+      "name": "Code: Validate Signature Match",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -46,10 +46,10 @@
     },
     {
       "parameters": {
-        "jsCode": "\nfunction b64url(input) {\n  return Buffer.from(JSON.stringify(input))\n    .toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\nconst now = Math.floor(Date.now()/1000);\n\n// Prefer Supabase values if present\nlet sub = $items('Code: Compare signature')[0].json.sub;\nlet email = $items('Code: Compare signature')[0].json.email || null;\n\nif (Array.isArray($items('Supabase: Confirm user exists')[0]?.json) &&\n    $items('Supabase: Confirm user exists')[0].json.length) {\n  const row = $items('Supabase: Confirm user exists')[0].json[0];\n  sub = row.user_id || sub;\n  email = row.email || email;\n}\n\nconst header = { alg: 'HS256', typ: 'JWT' };\nconst payload = { sub, email, scope: ['chat:read','chat:write'], iat: now, exp: now + 600 };\n\nconst h = b64url(header);\nconst p = b64url(payload);\n\nreturn [{\n  json: {\n    header_b64: h,\n    payload_b64: p,\n    signing_input: `${h}.${p}`,\n    sub\n  }\n}];\n"
+        "jsCode": "\nfunction b64url(input) {\n  return Buffer.from(JSON.stringify(input))\n    .toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\nconst now = Math.floor(Date.now()/1000);\n\n// Prefer Supabase values if present\nlet sub = $items('Code: Validate Signature Match')[0].json.sub;\nlet email = $items('Code: Validate Signature Match')[0].json.email || null;\n\nif (Array.isArray($items('HTTP: Confirm User Exists')[0]?.json) &&\n    $items('HTTP: Confirm User Exists')[0].json.length) {\n  const row = $items('HTTP: Confirm User Exists')[0].json[0];\n  sub = row.user_id || sub;\n  email = row.email || email;\n}\n\nconst header = { alg: 'HS256', typ: 'JWT' };\nconst payload = { sub, email, scope: ['chat:read','chat:write'], iat: now, exp: now + 600 };\n\nconst h = b64url(header);\nconst p = b64url(payload);\n\nreturn [{\n  json: {\n    header_b64: h,\n    payload_b64: p,\n    signing_input: `${h}.${p}`,\n    sub\n  }\n}];\n"
       },
       "id": "22be1cc9-79ed-45a2-811e-7a20dfac0605",
-      "name": "Code: Build JWT Header & Payload",
+      "name": "Code: Build Renewal Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -66,7 +66,7 @@
         "encoding": "base64"
       },
       "id": "5f1ff501-08e1-4c54-b5b4-8df17ff54de0",
-      "name": "Crypto: Sign JWT",
+      "name": "Crypto: Sign Renewal JWT",
       "type": "n8n-nodes-base.crypto",
       "typeVersion": 1,
       "position": [
@@ -79,7 +79,7 @@
         "jsCode": "\nconst sig = ($json.data || '')\n  .replace(/=/g, '')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_');\nreturn [{\n  json: {\n    userId: $json.sub,\n    jwt: `${$json.header_b64}.${$json.payload_b64}.${sig}`\n  }\n}];\n"
       },
       "id": "42e60326-6b62-4dc2-b951-f6902a299ef6",
-      "name": "Code: Assemble JWT",
+      "name": "Code: Assemble Renewal JWT",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -95,7 +95,7 @@
         "options": {}
       },
       "id": "7334de8b-88df-4f60-bdc2-d3c6c9047557",
-      "name": "Webhook: /session/renew",
+      "name": "Webhook: Handle Session Renew",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
@@ -136,7 +136,7 @@
         528
       ],
       "id": "57094c64-6569-43cf-9267-d9af67fade63",
-      "name": "If"
+      "name": "IF: JWT Valid"
     },
     {
       "parameters": {
@@ -147,7 +147,7 @@
         }
       },
       "id": "ef26b9bc-483f-40c6-ae95-d9cc14e541da",
-      "name": "Respond: 401",
+      "name": "Webhook: Return Unauthorized",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
@@ -164,7 +164,7 @@
         }
       },
       "id": "33d4746f-ebd1-4b89-b418-5478f9802b31",
-      "name": "Respond: 404",
+      "name": "Webhook: Return User Not Found",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
@@ -204,7 +204,7 @@
         544
       ],
       "id": "1f567eaf-3d73-4c99-b730-0b8c2f1447ff",
-      "name": "IF: signature valid"
+      "name": "IF: Signature Verified"
     },
     {
       "parameters": {
@@ -215,7 +215,7 @@
         "options": {}
       },
       "id": "4e6e1f1e-11ae-4cd9-a03f-859994ab164f",
-      "name": "Supabase: Confirm user exists",
+      "name": "HTTP: Confirm User Exists",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -233,7 +233,7 @@
         }
       },
       "id": "ec7dae38-1817-4e75-8cd0-36a27fa7f0fa",
-      "name": "Respond: new JWT",
+      "name": "Webhook: Return New JWT",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
@@ -244,124 +244,124 @@
   ],
   "pinData": {},
   "connections": {
-    "Code: Parse JWT": {
+    "Code: Parse Existing JWT": {
       "main": [
         [
           {
-            "node": "Crypto: HMAC verify",
+            "node": "Crypto: Verify JWT HMAC",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Crypto: HMAC verify": {
+    "Crypto: Verify JWT HMAC": {
       "main": [
         [
           {
-            "node": "Code: Compare signature",
+            "node": "Code: Validate Signature Match",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code: Compare signature": {
+    "Code: Validate Signature Match": {
       "main": [
         [
           {
-            "node": "IF: signature valid",
+            "node": "IF: Signature Verified",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code: Build JWT Header & Payload": {
+    "Code: Build Renewal Payload": {
       "main": [
         [
           {
-            "node": "Crypto: Sign JWT",
+            "node": "Crypto: Sign Renewal JWT",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Crypto: Sign JWT": {
+    "Crypto: Sign Renewal JWT": {
       "main": [
         [
           {
-            "node": "Code: Assemble JWT",
+            "node": "Code: Assemble Renewal JWT",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code: Assemble JWT": {
+    "Code: Assemble Renewal JWT": {
       "main": [
         [
           {
-            "node": "Respond: new JWT",
+            "node": "Webhook: Return New JWT",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Webhook: /session/renew": {
+    "Webhook: Handle Session Renew": {
       "main": [
         [
           {
-            "node": "Code: Parse JWT",
+            "node": "Code: Parse Existing JWT",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If": {
+    "IF: JWT Valid": {
       "main": [
         [
           {
-            "node": "Code: Build JWT Header & Payload",
+            "node": "Code: Build Renewal Payload",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Respond: 404",
+            "node": "Webhook: Return User Not Found",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "IF: signature valid": {
+    "IF: Signature Verified": {
       "main": [
         [
           {
-            "node": "Supabase: Confirm user exists",
+            "node": "HTTP: Confirm User Exists",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Respond: 401",
+            "node": "Webhook: Return Unauthorized",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase: Confirm user exists": {
+    "HTTP: Confirm User Exists": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "IF: JWT Valid",
             "type": "main",
             "index": 0
           }

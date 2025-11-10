@@ -16,7 +16,7 @@
         1584
       ],
       "id": "ab028aa0-7cda-4a60-a0f7-22bb9e4e45ac",
-      "name": "Webhook",
+      "name": "Webhook: Receive Chatbot Request",
       "webhookId": "eace1718-22fe-4890-ac00-81e2267bf49f",
       "credentials": {
         "jwtAuth": {
@@ -51,7 +51,7 @@
           ]
         }
       },
-      "name": "Exchange Refresh Token",
+      "name": "HTTP: Refresh Gmail Access Token",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -65,9 +65,9 @@
         "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}?format=full",
         "jsonParameters": true,
         "options": {},
-        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('Exchange Refresh Token').item.json.access_token}}\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('HTTP: Refresh Gmail Access Token').item.json.access_token}}\"\n}"
       },
-      "name": "Get Message Details",
+      "name": "HTTP: Fetch Incoming Gmail Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -91,7 +91,7 @@
         -256
       ],
       "id": "92caa596-dd2d-42e5-9075-38b48d1af9f5",
-      "name": "Respond to Webhook1"
+      "name": "Webhook: ACK Request Receipt"
     },
     {
       "parameters": {
@@ -114,14 +114,14 @@
         -256
       ],
       "id": "5394abfc-0281-4e22-86c6-243652df3303",
-      "name": "Reply"
+      "name": "Set: Build Initial Reply Payload"
     },
     {
       "parameters": {
         "fieldToSplitOut": "messages",
         "options": {}
       },
-      "name": "Split Out Items",
+      "name": "Item Lists: Expand Context Messages",
       "type": "n8n-nodes-base.itemLists",
       "typeVersion": 1,
       "position": [
@@ -145,7 +145,7 @@
         928
       ],
       "id": "cefc579e-423b-4e7f-b10e-86137a45426f",
-      "name": "Respond to Webhook"
+      "name": "Webhook: Send Early Response"
     },
     {
       "parameters": {
@@ -168,7 +168,7 @@
         928
       ],
       "id": "664b3732-12c7-4d0d-94e9-d82157aa3a4e",
-      "name": "Edit Fields"
+      "name": "Set: Normalize Webhook Payload"
     },
     {
       "parameters": {
@@ -252,7 +252,7 @@
         1152
       ],
       "id": "9c2951dc-fdb6-407f-82f9-828b2562a5e1",
-      "name": "Switch"
+      "name": "Switch: Route by Interaction Type"
     },
     {
       "parameters": {
@@ -268,7 +268,7 @@
         1408
       ],
       "id": "56404338-7ff0-4570-af75-e8a226a01275",
-      "name": "Respond to Webhook2"
+      "name": "Webhook: Return Unsupported Intent"
     },
     {
       "parameters": {
@@ -281,10 +281,10 @@
         "messages": {
           "values": [
             {
-              "content": "=📩 Input\nEmail Data (structured plaintext with line breaks):\n{{ $json.combinedFormattedThread }}\n\n\nUser Request (instruction — whether to summarize or draft a reply):\n{{ $('Webhook').item.json.body.query }}"
+              "content": "=📩 Input\nEmail Data (structured plaintext with line breaks):\n{{ $json.combinedFormattedThread }}\n\n\nUser Request (instruction — whether to summarize or draft a reply):\n{{ $('Webhook: Receive Chatbot Request').item.json.body.query }}"
             },
             {
-              "content": "=🧠 Sa.AI — Gmail Thread Summarizer & Draft Responder\n\nYou are Sa.AI, a smart Gmail inbox assistant for busy professionals.\n\nYour job is to read the provided email thread and either:\n- Summarize it succinctly with clear next actions, or\n- Produce a ready-to-send draft reply for that specific thread.\n\nYou must respond in strict JSON format with two fields: draft_required and bot_reply.\n\n⚙️ Decision Logic\n\nDetermine the intent from {{ $('Webhook').item.json.body.query }}:\n\n**If the user explicitly asks to create a draft** (e.g., \"draft a reply\", \"write a response\", \"compose an email back\", \"propose a reply\", \"respond to this\"):\n\nSet:\n- \"draft_required\": true\n- \"bot_reply\": the draft email body (plain text)\n\nInclude:\n- Appropriate greeting (if relevant)\n- Crisp response addressing context, decisions, or next steps\n- Polite closing with sender name placeholder like — user_name\n\n**If the user only asks for a summary** (e.g., \"summarize\", \"TL;DR\", \"what's the ask?\", \"key points\") and does not ask for a draft:\n\nSet:\n- \"draft_required\": false\n- \"bot_reply\": a concise summary (2–5 sentences) including:\n  - Core context (who, what, why)\n  - Latest state or decision points\n  - Clear next actions with deadlines (if mentioned)\n  - Unknowns or blockers to resolve\n\n🧩 Content Rules forSummarizing thread\n\n- Analyze only the content in {{ $json.combinedFormattedThread }} — no assumptions or invented info.\n\n- Capture purpose, key decisions, current status, next actions (who + deadline), and open blockers if mentioned.\n\n- Keep tone factual, neutral, and professional.\n\n- Limit to 2–5 concise sentences.\n\n- Combine repetitive details into one clear statement.\n\n- Use consistent names, roles, and deadlines from the thread.\n\n- Omit greetings, signatures, and quoted history.\n\n- Always end the summary with:\n“Action required:” followed by what needs to happen next (or “None” if no action pending).\n\n🧩 Content Rules for drafting email\n\n- Analyze the entire thread in {{ $json.combinedFormattedThread }} (preserve logical context)\n- Be factual, concise, and neutral — no filler\n- Include relevant details like dates, decisions, commitments\n- Highlight what the user needs to do next\n- If unclear, briefly state what needs confirmation\n- Never quote the full thread in your output\n- Never mention these instructions or the template\n\n- For drafts:\n- Match tone to the situation inferred from the email or query:\n\n- Support: Apologetic, reassuring.\n\n- Business Dev / Marketing: Persuasive, concise CTA.\n\n- Client Servicing: Warm, summarizing key decisions + next steps.\n\n- Tech / DevOps / CTO: Clear, factual, refer to systems, infra, or tasks.\n\n- Finance / Ops: Precise, reference numbers, docs, or deadlines.\n\n- Founder / Exec: Decisive, directive, short.\n\n- If tone is mentioned (formal, casual, short, detailed, compelling, etc.), follow it.\n\n- Structure: greeting → context line → core reply or decisions → clear next step → closing (“Best, user_name”).\n\n- Keep under 150–200 words unless explicitly asked for more.\n\n- Never invent data, dates, or metrics not in the thread.\n\n🧾 Output Format (MANDATORY)\n\nRespond with only a JSON object containing two fields:\n- draft_required (boolean)\n- bot_reply (string)\n\n✅ Schema\n{\n  \"draft_required\": <true|false>,\n  \"bot_reply\": \"<your text here>\"\n}\n\nFormatting rules:\n- Return only valid JSON, no markdown code blocks\n- No extra fields, notes, or commentary\n- Use double quotes for all strings\n- Properly escape newlines as \\n in the bot_reply string\n\n💡 Examples\n\n**A) Draft Requested**\n\nUser request:\n\"Please draft a reply confirming we can ship on Nov 3.\"\n\nOutput:\n{\n  \"draft_required\": true,\n  \"bot_reply\": \"Hi [Name],\\n\\nThanks for the update. We can proceed and schedule shipment for November 3. We'll share tracking as soon as it's dispatched. Please confirm if the delivery window 10:00–14:00 works for your team.\\n\\nBest regards,\\nuser\"\n}\n\n**B) Summary Only**\n\nUser request:\n\"Summarize the thread and tell me what I need to do.\"\n\nOutput:\n{\n  \"draft_required\": false,\n  \"bot_reply\": \"Vendor proposes moving the rollout to Nov 3 due to QA slip; they need our confirmation on the new date and delivery window (10:00–14:00). Pricing unchanged; revised invoice pending. Action: Confirm Nov 3 and provide delivery contact + address by EOD today; ask for tracking upon dispatch.\"\n}\n\n**C) Draft with Casual Tone**\n\nUser request:\n\"Draft a quick reply saying we're good with the new timeline.\"\n\nOutput:\n{\n  \"draft_required\": true,\n  \"bot_reply\": \"Hey [Name],\\n\\nAll good with the Nov 3 timeline. Just send over the tracking info when you have it.\\n\\nThanks,\\nuser\"\n}",
+              "content": "=🧠 Sa.AI — Gmail Thread Summarizer & Draft Responder\n\nYou are Sa.AI, a smart Gmail inbox assistant for busy professionals.\n\nYour job is to read the provided email thread and either:\n- Summarize it succinctly with clear next actions, or\n- Produce a ready-to-send draft reply for that specific thread.\n\nYou must respond in strict JSON format with two fields: draft_required and bot_reply.\n\n⚙️ Decision Logic\n\nDetermine the intent from {{ $('Webhook: Receive Chatbot Request').item.json.body.query }}:\n\n**If the user explicitly asks to create a draft** (e.g., \"draft a reply\", \"write a response\", \"compose an email back\", \"propose a reply\", \"respond to this\"):\n\nSet:\n- \"draft_required\": true\n- \"bot_reply\": the draft email body (plain text)\n\nInclude:\n- Appropriate greeting (if relevant)\n- Crisp response addressing context, decisions, or next steps\n- Polite closing with sender name placeholder like — user_name\n\n**If the user only asks for a summary** (e.g., \"summarize\", \"TL;DR\", \"what's the ask?\", \"key points\") and does not ask for a draft:\n\nSet:\n- \"draft_required\": false\n- \"bot_reply\": a concise summary (2–5 sentences) including:\n  - Core context (who, what, why)\n  - Latest state or decision points\n  - Clear next actions with deadlines (if mentioned)\n  - Unknowns or blockers to resolve\n\n🧩 Content Rules forSummarizing thread\n\n- Analyze only the content in {{ $json.combinedFormattedThread }} — no assumptions or invented info.\n\n- Capture purpose, key decisions, current status, next actions (who + deadline), and open blockers if mentioned.\n\n- Keep tone factual, neutral, and professional.\n\n- Limit to 2–5 concise sentences.\n\n- Combine repetitive details into one clear statement.\n\n- Use consistent names, roles, and deadlines from the thread.\n\n- Omit greetings, signatures, and quoted history.\n\n- Always end the summary with:\n“Action required:” followed by what needs to happen next (or “None” if no action pending).\n\n🧩 Content Rules for drafting email\n\n- Analyze the entire thread in {{ $json.combinedFormattedThread }} (preserve logical context)\n- Be factual, concise, and neutral — no filler\n- Include relevant details like dates, decisions, commitments\n- Highlight what the user needs to do next\n- If unclear, briefly state what needs confirmation\n- Never quote the full thread in your output\n- Never mention these instructions or the template\n\n- For drafts:\n- Match tone to the situation inferred from the email or query:\n\n- Support: Apologetic, reassuring.\n\n- Business Dev / Marketing: Persuasive, concise CTA.\n\n- Client Servicing: Warm, summarizing key decisions + next steps.\n\n- Tech / DevOps / CTO: Clear, factual, refer to systems, infra, or tasks.\n\n- Finance / Ops: Precise, reference numbers, docs, or deadlines.\n\n- Founder / Exec: Decisive, directive, short.\n\n- If tone is mentioned (formal, casual, short, detailed, compelling, etc.), follow it.\n\n- Structure: greeting → context line → core reply or decisions → clear next step → closing (“Best, user_name”).\n\n- Keep under 150–200 words unless explicitly asked for more.\n\n- Never invent data, dates, or metrics not in the thread.\n\n🧾 Output Format (MANDATORY)\n\nRespond with only a JSON object containing two fields:\n- draft_required (boolean)\n- bot_reply (string)\n\n✅ Schema\n{\n  \"draft_required\": <true|false>,\n  \"bot_reply\": \"<your text here>\"\n}\n\nFormatting rules:\n- Return only valid JSON, no markdown code blocks\n- No extra fields, notes, or commentary\n- Use double quotes for all strings\n- Properly escape newlines as \\n in the bot_reply string\n\n💡 Examples\n\n**A) Draft Requested**\n\nUser request:\n\"Please draft a reply confirming we can ship on Nov 3.\"\n\nOutput:\n{\n  \"draft_required\": true,\n  \"bot_reply\": \"Hi [Name],\\n\\nThanks for the update. We can proceed and schedule shipment for November 3. We'll share tracking as soon as it's dispatched. Please confirm if the delivery window 10:00–14:00 works for your team.\\n\\nBest regards,\\nuser\"\n}\n\n**B) Summary Only**\n\nUser request:\n\"Summarize the thread and tell me what I need to do.\"\n\nOutput:\n{\n  \"draft_required\": false,\n  \"bot_reply\": \"Vendor proposes moving the rollout to Nov 3 due to QA slip; they need our confirmation on the new date and delivery window (10:00–14:00). Pricing unchanged; revised invoice pending. Action: Confirm Nov 3 and provide delivery contact + address by EOD today; ask for tracking upon dispatch.\"\n}\n\n**C) Draft with Casual Tone**\n\nUser request:\n\"Draft a quick reply saying we're good with the new timeline.\"\n\nOutput:\n{\n  \"draft_required\": true,\n  \"bot_reply\": \"Hey [Name],\\n\\nAll good with the Nov 3 timeline. Just send over the tracking info when you have it.\\n\\nThanks,\\nuser\"\n}",
               "role": "system"
             }
           ]
@@ -299,7 +299,7 @@
         1360
       ],
       "id": "bcaf2712-1145-447a-9fc9-55e6d08d93cf",
-      "name": "Message a model2",
+      "name": "OpenAI: Draft Quick Reply",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -322,7 +322,7 @@
             },
             {
               "fieldId": "user_id",
-              "fieldValue": "={{ $('Webhook').first().json.body.userId }}"
+              "fieldValue": "={{ $('Webhook: Receive Chatbot Request').first().json.body.userId }}"
             },
             {
               "fieldId": "sender_email",
@@ -354,7 +354,7 @@
         1936
       ],
       "id": "ae0cc0ed-d567-4a70-ad76-87b520ebc19e",
-      "name": "Create a row1",
+      "name": "Supabase: Log Conversation Event",
       "credentials": {
         "supabaseApi": {
           "id": "AV3EDOwGJg3BQ3LT",
@@ -367,9 +367,9 @@
         "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}?format=full",
         "jsonParameters": true,
         "options": {},
-        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Set Access Token1').last().json.access_token }}\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Set: Inject Access Token (Alt Path)').last().json.access_token }}\"\n}"
       },
-      "name": "Get Message Details1",
+      "name": "HTTP: Fetch Reply Message Metadata",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -387,7 +387,7 @@
             {
               "keyName": "user_id",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').item.json.body.userId }}"
+              "keyValue": "={{ $('Webhook: Receive Chatbot Request').item.json.body.userId }}"
             }
           ]
         }
@@ -399,7 +399,7 @@
         1168
       ],
       "id": "fc7de903-d99c-4c38-a5ca-4dbd460803e7",
-      "name": "Get User ID",
+      "name": "Supabase: Lookup User Profile",
       "alwaysOutputData": false,
       "credentials": {
         "supabaseApi": {
@@ -491,7 +491,7 @@
         192
       ],
       "id": "908351a7-a576-4f2f-a227-8c7e47d7a545",
-      "name": "Switch1"
+      "name": "Switch: Branch on Retrieval Scope"
     },
     {
       "parameters": {
@@ -500,7 +500,7 @@
         "options": {},
         "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n}"
       },
-      "name": "List Messages for Context",
+      "name": "HTTP: Search Gmail Thread Context",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -511,12 +511,12 @@
     },
     {
       "parameters": {
-        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than:{{ $('Code4').item.json.summarize_dates || 7}}d",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than:{{ $('Code: Combine Draft with Memory').item.json.summarize_dates || 7}}d",
         "jsonParameters": true,
         "options": {},
         "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n}"
       },
-      "name": "List Messages for Inbox Summarization",
+      "name": "HTTP: Search Inbox Summaries",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -538,7 +538,7 @@
             {
               "id": "c15d8b39-818c-41fa-a634-4682e56b968b",
               "name": "sub_intent",
-              "value": "={{ $('Code4').item.json.sub_intent }}",
+              "value": "={{ $('Code: Combine Draft with Memory').item.json.sub_intent }}",
               "type": "string"
             }
           ]
@@ -552,7 +552,7 @@
         1168
       ],
       "id": "988d419f-e14f-4699-85b7-f8a0fab2910d",
-      "name": "Set Access Token"
+      "name": "Set: Inject Gmail Access Token"
     },
     {
       "parameters": {
@@ -565,11 +565,11 @@
         1840
       ],
       "id": "d769df3e-14b5-4770-9255-6fcc1bc874bc",
-      "name": "Code"
+      "name": "Code: Prepare Context Messages"
     },
     {
       "parameters": {
-        "jsCode": "// Get data from node names\nconst gmailMessages = $items(\"List Messages for Context\")[0].json.messages;\nconst supabaseRows = $items(\"Fetch existing id's\");\n\n// Build a Set for fast lookup of saved IDs\nconst savedIds = new Set(supabaseRows.map(row => row.json.id));\n\n// Only keep Gmail messages whose id is NOT in Supabase\nconst newMessages = gmailMessages.filter(msg => !savedIds.has(msg.id));\n\n// Return each as a new item for downstream processing\nreturn newMessages.map(msg => ({ json: msg }));\n"
+        "jsCode": "// Get data from node names\nconst gmailMessages = $items(\"HTTP: Search Gmail Thread Context\")[0].json.messages;\nconst supabaseRows = $items(\"Supabase: Fetch Memory Vector IDs\");\n\n// Build a Set for fast lookup of saved IDs\nconst savedIds = new Set(supabaseRows.map(row => row.json.id));\n\n// Only keep Gmail messages whose id is NOT in Supabase\nconst newMessages = gmailMessages.filter(msg => !savedIds.has(msg.id));\n\n// Return each as a new item for downstream processing\nreturn newMessages.map(msg => ({ json: msg }));\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -578,7 +578,7 @@
         1840
       ],
       "id": "6f658ff9-8f90-43ef-a89e-f4d495801853",
-      "name": "Code1",
+      "name": "Code: Format User Prompt",
       "alwaysOutputData": false
     },
     {
@@ -591,7 +591,7 @@
             {
               "keyName": "user_id",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').first().json.body.userId }}"
+              "keyValue": "={{ $('Webhook: Receive Chatbot Request').first().json.body.userId }}"
             }
           ]
         }
@@ -603,7 +603,7 @@
         1840
       ],
       "id": "42043d28-36b9-4f3a-a687-ab2ada744db3",
-      "name": "Fetch existing id's",
+      "name": "Supabase: Fetch Memory Vector IDs",
       "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
@@ -625,7 +625,7 @@
             },
             {
               "name": "user_id",
-              "value": "={{ $('Webhook').first().json.body.userId }}"
+              "value": "={{ $('Webhook: Receive Chatbot Request').first().json.body.userId }}"
             }
           ]
         },
@@ -638,7 +638,7 @@
         1744
       ],
       "id": "ab167a60-cc9b-4e3c-acaf-4b181a4dd54b",
-      "name": "HTTP Request"
+      "name": "HTTP: Retrieve Stored Memory"
     },
     {
       "parameters": {
@@ -651,7 +651,7 @@
         1744
       ],
       "id": "bb859ee9-1615-48b7-91ee-7e6ab908bbe1",
-      "name": "Code2"
+      "name": "Code: Prepare Memory Chunks"
     },
     {
       "parameters": {
@@ -670,7 +670,7 @@
         1008
       ],
       "id": "ad2ff79c-0dba-4d1a-8584-825e47f54940",
-      "name": "OpenAI Chat Model",
+      "name": "OpenAI: Generate Reply Draft",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -689,7 +689,7 @@
         784
       ],
       "id": "47d40e6c-6e73-41c1-9524-b40d799b7fc1",
-      "name": "Code4"
+      "name": "Code: Combine Draft with Memory"
     },
     {
       "parameters": {
@@ -703,7 +703,7 @@
         336
       ],
       "id": "95099d7c-72d0-44a9-b9c2-3dcfddfb6c0a",
-      "name": "Vector Store Retrieval1",
+      "name": "Vector Store: Retrieve Pinecone Context",
       "disabled": true
     },
     {
@@ -719,7 +719,7 @@
         672
       ],
       "id": "b0beafce-7fe1-4f75-ba12-74d26b1955db",
-      "name": "Embeddings OpenAI1",
+      "name": "OpenAI: Embed Query",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -735,7 +735,7 @@
           "mode": "id"
         },
         "options": {
-          "pineconeNamespace": "={{ $('Webhook').first().json.body.userId }}-ns"
+          "pineconeNamespace": "={{ $('Webhook: Receive Chatbot Request').first().json.body.userId }}-ns"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
@@ -745,7 +745,7 @@
         544
       ],
       "id": "0c12e322-1e6c-4a4b-b7e7-59e034a2fdcd",
-      "name": "Pinecone Vector Store2",
+      "name": "Pinecone: Query Memory Namespace",
       "credentials": {
         "pineconeApi": {
           "id": "mX5Mp9fM0gydbhMt",
@@ -758,9 +758,9 @@
         "url": "=https://gmail.googleapis.com/gmail/v1/users/me/threads/{{ $json.messages[0].threadId }}?format=full ",
         "jsonParameters": true,
         "options": {},
-        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('Exchange Refresh Token').item.json.access_token}}\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('HTTP: Refresh Gmail Access Token').item.json.access_token}}\"\n}"
       },
-      "name": "List thread",
+      "name": "HTTP: List Gmail Thread Messages",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -771,12 +771,12 @@
     },
     {
       "parameters": {
-        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages?q=subject:\"{{ $('Webhook').item.json.body.subjectLine }}\"\n",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages?q=subject:\"{{ $('Webhook: Receive Chatbot Request').item.json.body.subjectLine }}\"\n",
         "jsonParameters": true,
         "options": {},
-        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('Exchange Refresh Token').item.json.access_token}}\",\n \"Content-Type\": \"application/json\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('HTTP: Refresh Gmail Access Token').item.json.access_token}}\",\n \"Content-Type\": \"application/json\"\n}"
       },
-      "name": "Thread summarize",
+      "name": "HTTP: Summarize Thread via API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -790,9 +790,9 @@
         "url": "=https://gmail.googleapis.com/gmail/v1/users/me/threads/{{ $json.messages[0].threadId }}\n\n",
         "jsonParameters": true,
         "options": {},
-        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('Exchange Refresh Token').item.json.access_token}}\",\n \"Content-Type\": \"application/json\"\n}"
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('HTTP: Refresh Gmail Access Token').item.json.access_token}}\",\n \"Content-Type\": \"application/json\"\n}"
       },
-      "name": "Thread summarize1",
+      "name": "HTTP: Summarize Inbox via API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -812,7 +812,7 @@
         1360
       ],
       "id": "a8a5018c-eaf2-4b1c-b8b9-d13ff466199a",
-      "name": "Code5"
+      "name": "Code: Parse Summaries"
     },
     {
       "parameters": {
@@ -839,7 +839,7 @@
         928
       ],
       "id": "f94564a8-b651-4cf6-b65f-b7c09cd24f20",
-      "name": "Message a model1",
+      "name": "OpenAI: Produce Final Reply",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -858,7 +858,7 @@
         928
       ],
       "id": "2da99c46-b9b1-49ec-91d0-7043c75e37a8",
-      "name": "Code6"
+      "name": "Code: Build Reply Metadata"
     },
     {
       "parameters": {
@@ -871,7 +871,7 @@
         928
       ],
       "id": "f0ad55a9-1894-4f2f-a68a-55278deef327",
-      "name": "Code - decode base64"
+      "name": "Code: Decode Gmail Payload"
     },
     {
       "parameters": {
@@ -888,7 +888,7 @@
         208
       ],
       "id": "bd7aab9a-61ed-4b7c-8951-f49a30c15347",
-      "name": "Respond to Webhook3"
+      "name": "Webhook: Return Final Reply"
     },
     {
       "parameters": {
@@ -911,7 +911,7 @@
         432
       ],
       "id": "022a2457-a7eb-4c0e-b5d3-4f7e3695bcfc",
-      "name": "Reply1"
+      "name": "Set: Prepare Fallback Reply"
     },
     {
       "parameters": {
@@ -932,7 +932,7 @@
         336
       ],
       "id": "e849bfb2-52cb-4ff7-9417-62ca8ec25f42",
-      "name": "OpenAI Chat Model1",
+      "name": "OpenAI: Generate Clarification",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -951,7 +951,7 @@
         432
       ],
       "id": "f68dbb15-cb6d-4936-b0a3-931593a77977",
-      "name": "Code8"
+      "name": "Code: Evaluate Clarification Need"
     },
     {
       "parameters": {
@@ -985,7 +985,7 @@
         -256
       ],
       "id": "3f9ad9ce-2d2b-43fd-ae27-583c445bdd90",
-      "name": "If"
+      "name": "IF: Requires Perplexity Search"
     },
     {
       "parameters": {
@@ -1006,7 +1006,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"sonar\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are Perplexity, a web-connected assistant. Provide accurate and concise answers with source citations.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Webhook').item.json.body.query }}\"\n    }\n  ]\n}",
+        "jsonBody": "={\n  \"model\": \"sonar\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are Perplexity, a web-connected assistant. Provide accurate and concise answers with source citations.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Webhook: Receive Chatbot Request').item.json.body.query }}\"\n    }\n  ]\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -1016,7 +1016,7 @@
         -320
       ],
       "id": "2382b54f-700c-4dd8-b215-a36fc73756a5",
-      "name": "Perplexity API"
+      "name": "HTTP: Query Perplexity"
     },
     {
       "parameters": {
@@ -1047,7 +1047,7 @@
         -320
       ],
       "id": "423321e0-705e-49a8-89bd-40432bf38d3d",
-      "name": "Perplexity Response Structure",
+      "name": "OpenAI: Structure Perplexity Answer",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -1066,14 +1066,14 @@
         -320
       ],
       "id": "f9af6ddf-5d61-4e36-a44b-d18f2851e311",
-      "name": "Format Perplexity Response"
+      "name": "Code: Format Perplexity Answer"
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=INPUT FIELDS (from Webhook & Memory):\n- query: {{ $('Webhook').item.json.body.query || '' }}\n- subjectLine: {{ $('Webhook').item.json.body.subjectLine || '' }}\n- Memory: {{ JSON.stringify($json.Memory ?? []) }}    # may contain { n8n_response: \"<text>\", topic: \"<string>\" }",
+        "text": "=INPUT FIELDS (from Webhook & Memory):\n- query: {{ $('Webhook: Receive Chatbot Request').item.json.body.query || '' }}\n- subjectLine: {{ $('Webhook: Receive Chatbot Request').item.json.body.subjectLine || '' }}\n- Memory: {{ JSON.stringify($json.Memory ?? []) }}    # may contain { n8n_response: \"<text>\", topic: \"<string>\" }",
         "options": {
-          "systemMessage": "=🧠 Sa.AI — Deterministic Intent Classifier for Gmail Chatbot\n\nYou are a deterministic intent classifier for an Sa.AI Gmail assistant.\n\nALWAYS output STRICT RAW JSON only (no markdown, no code fences) with EXACT keys:\n\n{\n  \"intent\": \"gmail_related\" | \"context_related\" | \"normal_conversation\",\n  \"sub_intent\": \"inbox_related\" | \"thread_related\" | \"generalQuery\" | \"webSearch\" | \"\",\n  \"summarize_dates\": \"1 to 15\" (if user mentiones in the query). Else default value will be \"7\" if user does not ask.,\n  \"model\": \"Perplexity\" | \"\",\n  \"bot_reply\": \"<If the intent = \"normal_conversation\" and \"sub_intent\" =  \"generalQuery\" give a generic reply>\",\n  \"explanation\": \"<short reasoning>\",\n  \"specificity_score\": <number, only for context_related>,\n  \"requires_clarification\": <boolean, only for context_related>,\n  \"follow_up_question\": \"<string, only for context_related>\",\n  \"keywords_exact\": \"<pipe-separated terms, only for context_related, when necessary add keywords for better retrival for user query>\",\n  \"topK\": <number, only for context_related>,\n  \"route\": \"<clarify|retrieve, only for context_related>\",\n  \"memory_update\": {\n    \"id\": \"{{ $('Webhook').item.json.body.userId }}\",\n    \"Prompt\": \"{{ $('Webhook').item.json.body.query }}\",\n    \"requires_clarification\": false\n  }\n}\n\n--------------------------------------------------------------------------------\nHARD CONSTRAINTS (applicability mapping — violations are invalid)\n- If intent=\"gmail_related\" → sub_intent MUST be \"inbox_related\" or \"thread_related\" (or \"\" only if undecidable). \"generalQuery\" and \"webSearch\" are NOT allowed.\n- If intent=\"normal_conversation\" → sub_intent MUST be \"generalQuery\" or \"webSearch\". \"inbox_related\" and \"thread_related\" are NOT allowed.\n- If intent ∈ {\"context_related\"} → sub_intent MUST be \"\".\n\n--------------------------------------------------------------------------------\nCLASSIFICATION PRECEDENCE (apply in order and STOP at first match)\n1) gmail_related (summarize/compose/reply/draft/extract actions)\n2) context_related (requires inbox lookup or factual retrieval)\n3) normal_conversation (small talk or external info)\n\n--------------------------------------------------------------------------------\nINTENT RULES (deterministic)\n\nA) gmail_related → sub_intent ∈ {inbox_related, thread_related}\n   - THREAD only if:\n       (lower(query) contains any of: \"draft\", \"thread\",      \"thread\",\"conversation\",\"chain\", \"summarize this\")\n       AND subjectLine != \"\"\n     → sub_intent = \"thread_related\"; summarize_dates = \"\"\n   - INBOX if:\n       (lower(query) contains any of: \"summarize my inbox\",\"summary of my inbox\",\"overview of my inbox\"\n     → sub_intent = \"inbox_related\"; summarize_dates = EXTRACT_SUMMARIZE_DATES(query)\n   - Else (still gmail_related but not clearly thread/inbox and subjectLine exists):\n     → sub_intent = \"thread_related\"; summarize_dates = \"\"\n\nB) context_related\n   Trigger when the user asks for information that must be retrieved from  email data\n   Populate retrieval fields deterministically:\n     - specificity_score (0.00–1.00):\n         Start at 0.50.\n         +0.20 if query contains a proper name (capitalized word length≥2 not at sentence start) or an email-like token.\n         +0.10 if query contains a number or currency pattern.\n         +0.10 if query contains a date/time word (today,yesterday,week,weeks,month,months) or explicit date pattern (YYYY, dd/mm, mm/dd).\n         +0.10 if query contains a unique noun phrase ≥2 words (e.g., \"refund policy\", \"invoice status\").\n         Clamp to [0.00, 1.00].\n     - requires_clarification:\n         TRUE if specificity_score < 0.60; else FALSE.\n     - route:\n         \"clarify\" if requires_clarification is TRUE; otherwise \"retrieve\".\n     - follow_up_question:\n         ONLY IF requires_clarification TRUE, ask ONE concise disambiguator:\n           - If missing time: \"Which timeframe (last 7 days or a specific date)?\"\n           - If missing sender: \"From whom or which domain?\"\n           - If missing subject/topic: \"Any keywords from the subject?\"\n           - Else: \"Could you share more keywords or elaborate your query?\"\n         Else \"\".\n     - keywords_exact:\n         Pipe-separated list (no spaces around pipes) of exact terms extracted in order:\n           1) quoted phrases in query (without quotes)\n           2) email addresses\n           3) tokens after \"from:\" or \"subject:\" or \"label:\"\n           4) remaining capitalized multiword sequences (e.g., \"Acme Corp\")\n           5) standalone tokens with digits (e.g., \"INV-1042\", \"PO123\")\n         If none, \"\".\n     - topK:\n         10 if specificity_score ≥ 0.80\n         15 if 0.65 ≤ specificity_score < 0.80\n         20 if specificity_score < 0.65\n\n-When user asks for \"list\", \"fetch\",\"give all emails\" = \"context_related\", sub_intent=\"\"\n\n- \"keywords_exact\": If intent = \"context_related\", extract key nouns, names, or phrases (such as sender names, email addresses, or project titles) from the user query that define what information to retrieve.\nJoin them with \"|\" (pipe) as delimiters to improve retrieval precision.\nWhen the query includes a sender or contact (e.g., “emails from Nishant”), also include their resolved email address in the keywords and fetch all matching emails with subject, date, and body.\nOtherwise, leave empty.\n\n   Output: intent=\"context_related\", sub_intent=\"\"\n\nC) normal_conversation\n   Trigger when the message is small talk/greeting/acknowledgment OR unrelated to Gmail and asks for external info.\n   - If external info requested (e.g., \"news about AI\", \"latest AI trends\"):\n       sub_intent=\"webSearch\", model=\"Perplexity\"\n   - Else:\n       sub_intent=\"generalQuery\", model=\"\"\n   summarize_dates=\"\"\n--------------------------------------------------------------------------------\nMEMORY UPDATE\nAlways include \"memory_update\" with id and Prompt. Set \"requires_clarification\" to the same boolean used in context_related; otherwise false.\n\n--------------------------------------------------------------------------------\nNTER-TURN CLARIFICATION FUSION (deterministic)\n\nApplies only if the most recent entry in \"Memory\" (by created_at) had \"requires_clarification=true\".\n\nIf not, skip this section and proceed with normal classification.\n\nWhen triggered:\n\nTreat the current user input as a clarification reply to the previous query.\n→ intent=\"context_related\"\n→ requires_clarification=false\n→ route=\"retrieve\"\n\nFuse the original query and clarification reply into a single retrieval phrase.\n\nCombine both into keywords_exact as a pipe-separated string.\n\nExample:\nOriginal: “When is my client meeting?”\nClarification: “1 month”\n→ keywords_exact=\"client meeting|last 1 month\"\n\nRecompute retrieval parameters deterministically:\n\nUpdate specificity_score using the same scoring logic, now including clarified terms.\n\nSet topK accordingly (≥0.80 → 10; 0.65–0.79 → 15; <0.65 → 20).\n\nGuardrails:\n\nExecute this fusion logic only when the prior turn required clarification.\n\nIf user input is off-topic or adds unrelated detail, keep requires_clarification=true and ask another follow-up.\n\nOutput schema and key rules remain unchanged.\n\n--------------------------------------------------------------------------------\nOUTPUT VALIDATION (hard rules)\n- Keys and allowed values must match exactly as specified.\n- Enforce applicability mapping:\n    * intent=\"gmail_related\" → sub_intent ∈ {\"inbox_related\",\"thread_related\",\"\"} only.\n    * intent=\"normal_conversation\" → sub_intent ∈ {\"generalQuery\",\"webSearch\"} only.\n    * intent ∈ {\"context_related\"} → sub_intent=\"\" only.\n- For gmail_related, summarize_dates is filled ONLY if sub_intent=\"inbox_related\"; otherwise \"\".\n- Omit context_related-only fields for other intents (do NOT include them with null/empty).\n- Strings must not contain markdown/code fences.\n- No extra keys.\n"
+          "systemMessage": "=🧠 Sa.AI — Deterministic Intent Classifier for Gmail Chatbot\n\nYou are a deterministic intent classifier for an Sa.AI Gmail assistant.\n\nALWAYS output STRICT RAW JSON only (no markdown, no code fences) with EXACT keys:\n\n{\n  \"intent\": \"gmail_related\" | \"context_related\" | \"normal_conversation\",\n  \"sub_intent\": \"inbox_related\" | \"thread_related\" | \"generalQuery\" | \"webSearch\" | \"\",\n  \"summarize_dates\": \"1 to 15\" (if user mentiones in the query). Else default value will be \"7\" if user does not ask.,\n  \"model\": \"Perplexity\" | \"\",\n  \"bot_reply\": \"<If the intent = \"normal_conversation\" and \"sub_intent\" =  \"generalQuery\" give a generic reply>\",\n  \"explanation\": \"<short reasoning>\",\n  \"specificity_score\": <number, only for context_related>,\n  \"requires_clarification\": <boolean, only for context_related>,\n  \"follow_up_question\": \"<string, only for context_related>\",\n  \"keywords_exact\": \"<pipe-separated terms, only for context_related, when necessary add keywords for better retrival for user query>\",\n  \"topK\": <number, only for context_related>,\n  \"route\": \"<clarify|retrieve, only for context_related>\",\n  \"memory_update\": {\n    \"id\": \"{{ $('Webhook: Receive Chatbot Request').item.json.body.userId }}\",\n    \"Prompt\": \"{{ $('Webhook: Receive Chatbot Request').item.json.body.query }}\",\n    \"requires_clarification\": false\n  }\n}\n\n--------------------------------------------------------------------------------\nHARD CONSTRAINTS (applicability mapping — violations are invalid)\n- If intent=\"gmail_related\" → sub_intent MUST be \"inbox_related\" or \"thread_related\" (or \"\" only if undecidable). \"generalQuery\" and \"webSearch\" are NOT allowed.\n- If intent=\"normal_conversation\" → sub_intent MUST be \"generalQuery\" or \"webSearch\". \"inbox_related\" and \"thread_related\" are NOT allowed.\n- If intent ∈ {\"context_related\"} → sub_intent MUST be \"\".\n\n--------------------------------------------------------------------------------\nCLASSIFICATION PRECEDENCE (apply in order and STOP at first match)\n1) gmail_related (summarize/compose/reply/draft/extract actions)\n2) context_related (requires inbox lookup or factual retrieval)\n3) normal_conversation (small talk or external info)\n\n--------------------------------------------------------------------------------\nINTENT RULES (deterministic)\n\nA) gmail_related → sub_intent ∈ {inbox_related, thread_related}\n   - THREAD only if:\n       (lower(query) contains any of: \"draft\", \"thread\",      \"thread\",\"conversation\",\"chain\", \"summarize this\")\n       AND subjectLine != \"\"\n     → sub_intent = \"thread_related\"; summarize_dates = \"\"\n   - INBOX if:\n       (lower(query) contains any of: \"summarize my inbox\",\"summary of my inbox\",\"overview of my inbox\"\n     → sub_intent = \"inbox_related\"; summarize_dates = EXTRACT_SUMMARIZE_DATES(query)\n   - Else (still gmail_related but not clearly thread/inbox and subjectLine exists):\n     → sub_intent = \"thread_related\"; summarize_dates = \"\"\n\nB) context_related\n   Trigger when the user asks for information that must be retrieved from  email data\n   Populate retrieval fields deterministically:\n     - specificity_score (0.00–1.00):\n         Start at 0.50.\n         +0.20 if query contains a proper name (capitalized word length≥2 not at sentence start) or an email-like token.\n         +0.10 if query contains a number or currency pattern.\n         +0.10 if query contains a date/time word (today,yesterday,week,weeks,month,months) or explicit date pattern (YYYY, dd/mm, mm/dd).\n         +0.10 if query contains a unique noun phrase ≥2 words (e.g., \"refund policy\", \"invoice status\").\n         Clamp to [0.00, 1.00].\n     - requires_clarification:\n         TRUE if specificity_score < 0.60; else FALSE.\n     - route:\n         \"clarify\" if requires_clarification is TRUE; otherwise \"retrieve\".\n     - follow_up_question:\n         ONLY IF requires_clarification TRUE, ask ONE concise disambiguator:\n           - If missing time: \"Which timeframe (last 7 days or a specific date)?\"\n           - If missing sender: \"From whom or which domain?\"\n           - If missing subject/topic: \"Any keywords from the subject?\"\n           - Else: \"Could you share more keywords or elaborate your query?\"\n         Else \"\".\n     - keywords_exact:\n         Pipe-separated list (no spaces around pipes) of exact terms extracted in order:\n           1) quoted phrases in query (without quotes)\n           2) email addresses\n           3) tokens after \"from:\" or \"subject:\" or \"label:\"\n           4) remaining capitalized multiword sequences (e.g., \"Acme Corp\")\n           5) standalone tokens with digits (e.g., \"INV-1042\", \"PO123\")\n         If none, \"\".\n     - topK:\n         10 if specificity_score ≥ 0.80\n         15 if 0.65 ≤ specificity_score < 0.80\n         20 if specificity_score < 0.65\n\n-When user asks for \"list\", \"fetch\",\"give all emails\" = \"context_related\", sub_intent=\"\"\n\n- \"keywords_exact\": If intent = \"context_related\", extract key nouns, names, or phrases (such as sender names, email addresses, or project titles) from the user query that define what information to retrieve.\nJoin them with \"|\" (pipe) as delimiters to improve retrieval precision.\nWhen the query includes a sender or contact (e.g., “emails from Nishant”), also include their resolved email address in the keywords and fetch all matching emails with subject, date, and body.\nOtherwise, leave empty.\n\n   Output: intent=\"context_related\", sub_intent=\"\"\n\nC) normal_conversation\n   Trigger when the message is small talk/greeting/acknowledgment OR unrelated to Gmail and asks for external info.\n   - If external info requested (e.g., \"news about AI\", \"latest AI trends\"):\n       sub_intent=\"webSearch\", model=\"Perplexity\"\n   - Else:\n       sub_intent=\"generalQuery\", model=\"\"\n   summarize_dates=\"\"\n--------------------------------------------------------------------------------\nMEMORY UPDATE\nAlways include \"memory_update\" with id and Prompt. Set \"requires_clarification\" to the same boolean used in context_related; otherwise false.\n\n--------------------------------------------------------------------------------\nNTER-TURN CLARIFICATION FUSION (deterministic)\n\nApplies only if the most recent entry in \"Memory\" (by created_at) had \"requires_clarification=true\".\n\nIf not, skip this section and proceed with normal classification.\n\nWhen triggered:\n\nTreat the current user input as a clarification reply to the previous query.\n→ intent=\"context_related\"\n→ requires_clarification=false\n→ route=\"retrieve\"\n\nFuse the original query and clarification reply into a single retrieval phrase.\n\nCombine both into keywords_exact as a pipe-separated string.\n\nExample:\nOriginal: “When is my client meeting?”\nClarification: “1 month”\n→ keywords_exact=\"client meeting|last 1 month\"\n\nRecompute retrieval parameters deterministically:\n\nUpdate specificity_score using the same scoring logic, now including clarified terms.\n\nSet topK accordingly (≥0.80 → 10; 0.65–0.79 → 15; <0.65 → 20).\n\nGuardrails:\n\nExecute this fusion logic only when the prior turn required clarification.\n\nIf user input is off-topic or adds unrelated detail, keep requires_clarification=true and ask another follow-up.\n\nOutput schema and key rules remain unchanged.\n\n--------------------------------------------------------------------------------\nOUTPUT VALIDATION (hard rules)\n- Keys and allowed values must match exactly as specified.\n- Enforce applicability mapping:\n    * intent=\"gmail_related\" → sub_intent ∈ {\"inbox_related\",\"thread_related\",\"\"} only.\n    * intent=\"normal_conversation\" → sub_intent ∈ {\"generalQuery\",\"webSearch\"} only.\n    * intent ∈ {\"context_related\"} → sub_intent=\"\" only.\n- For gmail_related, summarize_dates is filled ONLY if sub_intent=\"inbox_related\"; otherwise \"\".\n- Omit context_related-only fields for other intents (do NOT include them with null/empty).\n- Strings must not contain markdown/code fences.\n- No extra keys.\n"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -1083,7 +1083,7 @@
         784
       ],
       "id": "007a4872-da9a-4bf5-9c24-20d520c04782",
-      "name": "AI Agent - Intent Classifier"
+      "name": "Agent: Classify User Intent"
     },
     {
       "parameters": {
@@ -1100,7 +1100,7 @@
         112
       ],
       "id": "130d8cb9-e9ae-4eba-8f68-16c3183e3872",
-      "name": "AI Agent - Context Aware"
+      "name": "Agent: Generate Context Answer"
     },
     {
       "parameters": {
@@ -1133,7 +1133,7 @@
             {
               "id": "44e2a157-0028-4178-8d60-131971045514",
               "name": "user_query",
-              "value": "={{ $('Webhook').item.json.body.query }}",
+              "value": "={{ $('Webhook: Receive Chatbot Request').item.json.body.query }}",
               "type": "string"
             },
             {
@@ -1159,7 +1159,7 @@
         208
       ],
       "id": "546498c7-8661-4213-a248-f6341f4600a5",
-      "name": "Set - Classifier Post-Process"
+      "name": "Set: Normalize Intent Output"
     },
     {
       "parameters": {
@@ -1193,7 +1193,7 @@
         208
       ],
       "id": "8441723b-6879-4649-888f-2ee265603d25",
-      "name": "If1"
+      "name": "IF: Needs Clarification Reply"
     },
     {
       "parameters": {
@@ -1216,7 +1216,7 @@
         224
       ],
       "id": "5d52bb86-5f84-4165-9909-34e80a89c3b3",
-      "name": "Reply (clarify)"
+      "name": "Set: Compose Clarification Reply"
     },
     {
       "parameters": {
@@ -1233,7 +1233,7 @@
         1584
       ],
       "id": "7992fcf8-310e-4e5c-b8b5-049f88780c33",
-      "name": "Aggregate"
+      "name": "Aggregate: Merge Clarification Context"
     },
     {
       "parameters": {
@@ -1248,7 +1248,7 @@
         784
       ],
       "id": "9ca458c5-94f6-4993-9509-37c0c05bfe2e",
-      "name": "Merge"
+      "name": "Merge: Combine Primary & Clarification"
     },
     {
       "parameters": {
@@ -1262,11 +1262,11 @@
           "parameters": [
             {
               "name": "id",
-              "value": "={{ $('Webhook').item.json.body.userId }}"
+              "value": "={{ $('Webhook: Receive Chatbot Request').item.json.body.userId }}"
             },
             {
               "name": "Prompt",
-              "value": "={{ $('Webhook').item.json.body.query }}"
+              "value": "={{ $('Webhook: Receive Chatbot Request').item.json.body.query }}"
             },
             {
               "name": "requires_clarification",
@@ -1276,7 +1276,7 @@
         },
         "options": {}
       },
-      "name": "Supabase: Upsert user",
+      "name": "HTTP: Upsert User Profile",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -1299,7 +1299,7 @@
         },
         "options": {}
       },
-      "name": "Supabase: GET Memory",
+      "name": "HTTP: Fetch User Memory",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -1311,7 +1311,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Email Context Preprocessor\nconst userQuery = $('Webhook').item.json.body.query;\nconst keywords = $json.keywords_exact || \"\";\nconst explanation = $json.explanation || \"\";\n\n// Extract potential email identifiers\nconst emailPattern = /[\\w\\.-]+@[\\w\\.-]+\\.\\w+/g;\nconst emails = userQuery.match(emailPattern) || [];\n\n// Extract date references\nconst datePattern = /\\b(yesterday|today|last\\s+\\w+|this\\s+\\w+|\\d+\\s+days?\\s+ago)\\b/gi;\nconst dateRefs = userQuery.match(datePattern) || [];\n\n// Extract subject keywords (quoted text)\nconst subjectPattern = /\"([^\"]+)\"/g;\nconst subjects = [];\nlet match;\nwhile ((match = subjectPattern.exec(userQuery)) !== null) {\n  subjects.push(match[1]);\n}\n\nreturn [{\n  json: {\n    user_query: userQuery,\n    keywords_exact: keywords,\n    explanation: explanation,\n    extracted_emails: emails,\n    date_references: dateRefs,\n    subject_keywords: subjects,\n    Memory: $json.Memory || []\n  }\n}];"
+        "jsCode": "// Email Context Preprocessor\nconst userQuery = $('Webhook: Receive Chatbot Request').item.json.body.query;\nconst keywords = $json.keywords_exact || \"\";\nconst explanation = $json.explanation || \"\";\n\n// Extract potential email identifiers\nconst emailPattern = /[\\w\\.-]+@[\\w\\.-]+\\.\\w+/g;\nconst emails = userQuery.match(emailPattern) || [];\n\n// Extract date references\nconst datePattern = /\\b(yesterday|today|last\\s+\\w+|this\\s+\\w+|\\d+\\s+days?\\s+ago)\\b/gi;\nconst dateRefs = userQuery.match(datePattern) || [];\n\n// Extract subject keywords (quoted text)\nconst subjectPattern = /\"([^\"]+)\"/g;\nconst subjects = [];\nlet match;\nwhile ((match = subjectPattern.exec(userQuery)) !== null) {\n  subjects.push(match[1]);\n}\n\nreturn [{\n  json: {\n    user_query: userQuery,\n    keywords_exact: keywords,\n    explanation: explanation,\n    extracted_emails: emails,\n    date_references: dateRefs,\n    subject_keywords: subjects,\n    Memory: $json.Memory || []\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1320,7 +1320,7 @@
         432
       ],
       "id": "656f1fa9-8799-4f84-9228-427eaa376d44",
-      "name": "Code in JavaScript"
+      "name": "Code: Merge Memory with Reply"
     },
     {
       "parameters": {
@@ -1335,7 +1335,7 @@
         784
       ],
       "id": "cd661f64-81b6-4b81-acc5-8acae2404a45",
-      "name": "Merge1"
+      "name": "Merge: Combine Reply Streams"
     },
     {
       "parameters": {
@@ -1355,7 +1355,7 @@
         },
         "options": {}
       },
-      "name": "Supabase: Upsert user1",
+      "name": "HTTP: Persist Updated Memory",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -1386,7 +1386,7 @@
         1408
       ],
       "id": "fe3683e5-b3f0-4a2c-b40a-98441c7e6313",
-      "name": "Edit Fields2"
+      "name": "Set: Prepare Draft Metadata"
     },
     {
       "parameters": {
@@ -1420,7 +1420,7 @@
         1360
       ],
       "id": "30e8df8e-de3b-471c-a1f9-ba7cd3e46c55",
-      "name": "If2"
+      "name": "IF: Should Send via Gmail API"
     },
     {
       "parameters": {
@@ -1431,7 +1431,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$('Exchange Refresh Token').item.json.access_token}}"
+              "value": "=Bearer {{$('HTTP: Refresh Gmail Access Token').item.json.access_token}}"
             }
           ]
         },
@@ -1447,7 +1447,7 @@
         1168
       ],
       "id": "c7ad657d-c707-48c2-82f6-8e74385923a9",
-      "name": "HTTP Request1"
+      "name": "HTTP: Fetch Draft Thread"
     },
     {
       "parameters": {
@@ -1460,7 +1460,7 @@
         1168
       ],
       "id": "f0f701c5-662b-41c0-b4fd-e20644cd57e2",
-      "name": "code: create draft"
+      "name": "Code: Build Gmail Draft"
     },
     {
       "parameters": {
@@ -1473,7 +1473,7 @@
         1120
       ],
       "id": "c1616578-f201-4394-a68c-01d0680ad864",
-      "name": "Code in JavaScript2"
+      "name": "Code: Encode Draft MIME"
     },
     {
       "parameters": {
@@ -1488,7 +1488,7 @@
         1168
       ],
       "id": "a3cba92a-b087-493d-928e-3a2c9d8adefa",
-      "name": "Merge2"
+      "name": "Merge: Attach Draft Metadata"
     },
     {
       "parameters": {
@@ -1535,7 +1535,7 @@
         1168
       ],
       "id": "4cb9beab-b6bb-48e4-b678-d066d29bdcdc",
-      "name": "Edit Fields3"
+      "name": "Set: Prepare Webhook Success Payload"
     },
     {
       "parameters": {
@@ -1550,7 +1550,7 @@
         1168
       ],
       "id": "76a18dc1-a583-4c8f-a929-fd3726a1e49d",
-      "name": "Respond to Webhook4"
+      "name": "Webhook: Return Success Payload"
     },
     {
       "parameters": {
@@ -1579,7 +1579,7 @@
         1840
       ],
       "id": "4d50e461-8081-4009-84cb-11c90556f5c1",
-      "name": "Edit Fields1"
+      "name": "Set: Prepare Refresh Request"
     },
     {
       "parameters": {
@@ -1607,7 +1607,7 @@
           ]
         }
       },
-      "name": "Exchange Refresh Token1",
+      "name": "HTTP: Refresh Gmail Token (Alt Path)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
@@ -1626,7 +1626,7 @@
             {
               "keyName": "user_id",
               "condition": "eq",
-              "keyValue": "={{ $('Webhook').item.json.body.userId }}"
+              "keyValue": "={{ $('Webhook: Receive Chatbot Request').item.json.body.userId }}"
             }
           ]
         }
@@ -1638,7 +1638,7 @@
         1840
       ],
       "id": "1e3f4471-ed81-46cd-8e8e-9e215cba37e4",
-      "name": "Get User ID1",
+      "name": "Supabase: Lookup User (Alt Path)",
       "alwaysOutputData": false,
       "credentials": {
         "supabaseApi": {
@@ -1660,7 +1660,7 @@
             {
               "id": "c15d8b39-818c-41fa-a634-4682e56b968b",
               "name": "sub_intent",
-              "value": "={{ $('Edit Fields1').item.json.sub_intent }}",
+              "value": "={{ $('Set: Prepare Refresh Request').item.json.sub_intent }}",
               "type": "string"
             }
           ]
@@ -1674,7 +1674,7 @@
         1840
       ],
       "id": "53cbfc1b-baab-4b76-b8c9-099e6dd26aa2",
-      "name": "Set Access Token1"
+      "name": "Set: Inject Access Token (Alt Path)"
     },
     {
       "parameters": {
@@ -1688,7 +1688,7 @@
         },
         "topK": 120,
         "options": {
-          "pineconeNamespace": "={{ $('Webhook').first().json.body.userId }}-ns"
+          "pineconeNamespace": "={{ $('Webhook: Receive Chatbot Request').first().json.body.userId }}-ns"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
@@ -1698,7 +1698,7 @@
         336
       ],
       "id": "c98d141a-de1c-404c-9e60-a63088e53861",
-      "name": "Pinecone Vector Store",
+      "name": "Pinecone: Upsert Memory Chunk",
       "credentials": {
         "pineconeApi": {
           "id": "mX5Mp9fM0gydbhMt",
@@ -1719,7 +1719,7 @@
         448
       ],
       "id": "5f61467c-b438-473b-96ec-1a9b27afa6c2",
-      "name": "Embeddings OpenAI",
+      "name": "OpenAI: Embed Memory Chunk",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -1738,7 +1738,7 @@
         928
       ],
       "id": "19796017-2295-4c40-9066-afaccd069975",
-      "name": "Code: Filter CATEGORY_PERSONAL"
+      "name": "Code: Filter Personal Emails"
     },
     {
       "parameters": {},
@@ -1749,7 +1749,7 @@
         624
       ],
       "id": "2d8ef248-333c-41a0-9eba-176653f1d4b2",
-      "name": "Reranker Cohere",
+      "name": "Cohere: Rerank Memory Candidates",
       "credentials": {
         "cohereApi": {
           "id": "STdKBbrTUUue83kp",
@@ -1768,7 +1768,7 @@
         1840
       ],
       "id": "edddfbe1-1939-48a0-9f8b-d8a3180d84f9",
-      "name": "Code: Filter CATEGORY_PERSONAL1"
+      "name": "Code: Filter Reranked Results"
     },
     {
       "parameters": {
@@ -1789,7 +1789,7 @@
         496
       ],
       "id": "c15cd7b9-270d-4bd7-bcd8-d52a7b67afb0",
-      "name": "OpenAI Chat Model4",
+      "name": "OpenAI: Generate Summarized Reply",
       "credentials": {
         "openAiApi": {
           "id": "KvebejLef3Y26fjP",
@@ -1807,7 +1807,7 @@
           "parameters": [
             {
               "name": "user_id",
-              "value": "={{ $('Webhook').item.json.jwtPayload.sub }}"
+              "value": "={{ $('Webhook: Receive Chatbot Request').item.json.jwtPayload.sub }}"
             },
             {
               "name": "=access_token",
@@ -1815,7 +1815,7 @@
             },
             {
               "name": "Email",
-              "value": "={{ $('Webhook').item.json.jwtPayload.email }}"
+              "value": "={{ $('Webhook: Receive Chatbot Request').item.json.jwtPayload.email }}"
             }
           ]
         },
@@ -1828,11 +1828,11 @@
         2240
       ],
       "id": "1263609a-7308-486c-a78c-1ff701bc1325",
-      "name": "HTTP Request2"
+      "name": "HTTP: Send Gmail Draft"
     }
   ],
   "pinData": {
-    "Webhook": [
+    "Webhook: Receive Chatbot Request": [
       {
         "json": {
           "headers": {
@@ -1884,94 +1884,94 @@
     ]
   },
   "connections": {
-    "Webhook": {
+    "Webhook: Receive Chatbot Request": {
       "main": [
         [
           {
-            "node": "Supabase: GET Memory",
+            "node": "HTTP: Fetch User Memory",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Merge",
+            "node": "Merge: Combine Primary & Clarification",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Edit Fields1",
+            "node": "Set: Prepare Refresh Request",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Exchange Refresh Token": {
+    "HTTP: Refresh Gmail Access Token": {
       "main": [
         [
           {
-            "node": "Set Access Token",
+            "node": "Set: Inject Gmail Access Token",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Message Details": {
+    "HTTP: Fetch Incoming Gmail Message": {
       "main": [
         [
           {
-            "node": "Code: Filter CATEGORY_PERSONAL",
+            "node": "Code: Filter Personal Emails",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Reply": {
+    "Set: Build Initial Reply Payload": {
       "main": [
         [
           {
-            "node": "Respond to Webhook1",
+            "node": "Webhook: ACK Request Receipt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split Out Items": {
+    "Item Lists: Expand Context Messages": {
       "main": [
         [
           {
-            "node": "Get Message Details",
+            "node": "HTTP: Fetch Incoming Gmail Message",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields": {
+    "Set: Normalize Webhook Payload": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Webhook: Send Early Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch": {
+    "Switch: Route by Interaction Type": {
       "main": [
         [
           {
-            "node": "List Messages for Inbox Summarization",
+            "node": "HTTP: Search Inbox Summaries",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Thread summarize",
+            "node": "HTTP: Summarize Thread via API",
             "type": "main",
             "index": 0
           }
@@ -1979,726 +1979,726 @@
         []
       ]
     },
-    "Message a model2": {
+    "OpenAI: Draft Quick Reply": {
       "main": [
         [
           {
-            "node": "If2",
+            "node": "IF: Should Send via Gmail API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Message Details1": {
+    "HTTP: Fetch Reply Message Metadata": {
       "main": [
         [
           {
-            "node": "Code: Filter CATEGORY_PERSONAL1",
+            "node": "Code: Filter Reranked Results",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get User ID": {
+    "Supabase: Lookup User Profile": {
       "main": [
         [
           {
-            "node": "Exchange Refresh Token",
+            "node": "HTTP: Refresh Gmail Access Token",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch1": {
+    "Switch: Branch on Retrieval Scope": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "IF: Requires Perplexity Search",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Set - Classifier Post-Process",
+            "node": "Set: Normalize Intent Output",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Get User ID",
+            "node": "Supabase: Lookup User Profile",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "List Messages for Context": {
+    "HTTP: Search Gmail Thread Context": {
       "main": [
         [
           {
-            "node": "Fetch existing id's",
+            "node": "Supabase: Fetch Memory Vector IDs",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "List Messages for Inbox Summarization": {
+    "HTTP: Search Inbox Summaries": {
       "main": [
         [
           {
-            "node": "Split Out Items",
+            "node": "Item Lists: Expand Context Messages",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set Access Token": {
+    "Set: Inject Gmail Access Token": {
       "main": [
         [
           {
-            "node": "Switch",
+            "node": "Switch: Route by Interaction Type",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code": {
+    "Code: Prepare Context Messages": {
       "main": [
         [
           {
-            "node": "Create a row1",
+            "node": "Supabase: Log Conversation Event",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Code2",
+            "node": "Code: Prepare Memory Chunks",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fetch existing id's": {
+    "Supabase: Fetch Memory Vector IDs": {
       "main": [
         [
           {
-            "node": "Code1",
+            "node": "Code: Format User Prompt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code1": {
+    "Code: Format User Prompt": {
       "main": [
         [
           {
-            "node": "Get Message Details1",
+            "node": "HTTP: Fetch Reply Message Metadata",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code2": {
+    "Code: Prepare Memory Chunks": {
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "HTTP: Retrieve Stored Memory",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI Chat Model": {
+    "OpenAI: Generate Reply Draft": {
       "ai_languageModel": [
         [
           {
-            "node": "AI Agent - Intent Classifier",
+            "node": "Agent: Classify User Intent",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Code4": {
+    "Code: Combine Draft with Memory": {
       "main": [
         [
           {
-            "node": "Switch1",
+            "node": "Switch: Branch on Retrieval Scope",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Supabase: Upsert user",
+            "node": "HTTP: Upsert User Profile",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Embeddings OpenAI1": {
+    "OpenAI: Embed Query": {
       "ai_embedding": [
         [
           {
-            "node": "Pinecone Vector Store2",
+            "node": "Pinecone: Query Memory Namespace",
             "type": "ai_embedding",
             "index": 0
           }
         ]
       ]
     },
-    "Pinecone Vector Store2": {
+    "Pinecone: Query Memory Namespace": {
       "ai_vectorStore": [
         [
           {
-            "node": "Vector Store Retrieval1",
+            "node": "Vector Store: Retrieve Pinecone Context",
             "type": "ai_vectorStore",
             "index": 0
           }
         ]
       ]
     },
-    "Vector Store Retrieval1": {
+    "Vector Store: Retrieve Pinecone Context": {
       "ai_tool": [
         [
           {
-            "node": "AI Agent - Context Aware",
+            "node": "Agent: Generate Context Answer",
             "type": "ai_tool",
             "index": 0
           }
         ]
       ]
     },
-    "List thread": {
+    "HTTP: List Gmail Thread Messages": {
       "main": [
         [
           {
-            "node": "Code5",
+            "node": "Code: Parse Summaries",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Code in JavaScript2",
+            "node": "Code: Encode Draft MIME",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Thread summarize": {
+    "HTTP: Summarize Thread via API": {
       "main": [
         [
           {
-            "node": "Thread summarize1",
+            "node": "HTTP: Summarize Inbox via API",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Thread summarize1": {
+    "HTTP: Summarize Inbox via API": {
       "main": [
         [
           {
-            "node": "List thread",
+            "node": "HTTP: List Gmail Thread Messages",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code5": {
+    "Code: Parse Summaries": {
       "main": [
         [
           {
-            "node": "Message a model2",
+            "node": "OpenAI: Draft Quick Reply",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code6": {
+    "Code: Build Reply Metadata": {
       "main": [
         [
           {
-            "node": "Message a model1",
+            "node": "OpenAI: Produce Final Reply",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code - decode base64": {
+    "Code: Decode Gmail Payload": {
       "main": [
         [
           {
-            "node": "Code6",
+            "node": "Code: Build Reply Metadata",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Message a model1": {
+    "OpenAI: Produce Final Reply": {
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Set: Normalize Webhook Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Reply1": {
+    "Set: Prepare Fallback Reply": {
       "main": [
         [
           {
-            "node": "Respond to Webhook3",
+            "node": "Webhook: Return Final Reply",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI Chat Model1": {
+    "OpenAI: Generate Clarification": {
       "ai_languageModel": [
         [
           {
-            "node": "AI Agent - Context Aware",
+            "node": "Agent: Generate Context Answer",
             "type": "ai_languageModel",
             "index": 0
           }
         ]
       ]
     },
-    "Code8": {
+    "Code: Evaluate Clarification Need": {
       "main": [
         [
           {
-            "node": "Reply1",
+            "node": "Set: Prepare Fallback Reply",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If": {
+    "IF: Requires Perplexity Search": {
       "main": [
         [
           {
-            "node": "Perplexity API",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Reply",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Perplexity API": {
-      "main": [
-        [
-          {
-            "node": "Perplexity Response Structure",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Perplexity Response Structure": {
-      "main": [
-        [
-          {
-            "node": "Format Perplexity Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Perplexity Response": {
-      "main": [
-        [
-          {
-            "node": "Reply",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Agent - Intent Classifier": {
-      "main": [
-        [
-          {
-            "node": "Code4",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Agent - Context Aware": {
-      "main": [
-        [
-          {
-            "node": "Code8",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Set - Classifier Post-Process": {
-      "main": [
-        [
-          {
-            "node": "If1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If1": {
-      "main": [
-        [
-          {
-            "node": "Reply (clarify)",
+            "node": "HTTP: Query Perplexity",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Set: Build Initial Reply Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Reply (clarify)": {
+    "HTTP: Query Perplexity": {
       "main": [
         [
           {
-            "node": "Respond to Webhook3",
+            "node": "OpenAI: Structure Perplexity Answer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge": {
+    "OpenAI: Structure Perplexity Answer": {
       "main": [
         [
           {
-            "node": "AI Agent - Intent Classifier",
+            "node": "Code: Format Perplexity Answer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Aggregate": {
+    "Code: Format Perplexity Answer": {
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Set: Build Initial Reply Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent: Classify User Intent": {
+      "main": [
+        [
+          {
+            "node": "Code: Combine Draft with Memory",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent: Generate Context Answer": {
+      "main": [
+        [
+          {
+            "node": "Code: Evaluate Clarification Need",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Normalize Intent Output": {
+      "main": [
+        [
+          {
+            "node": "IF: Needs Clarification Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Needs Clarification Reply": {
+      "main": [
+        [
+          {
+            "node": "Set: Compose Clarification Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Merge Memory with Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: Compose Clarification Reply": {
+      "main": [
+        [
+          {
+            "node": "Webhook: Return Final Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge: Combine Primary & Clarification": {
+      "main": [
+        [
+          {
+            "node": "Agent: Classify User Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate: Merge Clarification Context": {
+      "main": [
+        [
+          {
+            "node": "Merge: Combine Primary & Clarification",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Supabase: GET Memory": {
+    "HTTP: Fetch User Memory": {
       "main": [
         [
           {
-            "node": "Aggregate",
+            "node": "Aggregate: Merge Clarification Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript": {
+    "Code: Merge Memory with Reply": {
       "main": [
         [
           {
-            "node": "AI Agent - Context Aware",
+            "node": "Agent: Generate Context Answer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase: Upsert user": {
+    "HTTP: Upsert User Profile": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Merge: Combine Reply Streams",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Respond to Webhook3": {
+    "Webhook: Return Final Reply": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Merge: Combine Reply Streams",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Merge1": {
+    "Merge: Combine Reply Streams": {
       "main": [
         [
           {
-            "node": "Supabase: Upsert user1",
+            "node": "HTTP: Persist Updated Memory",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Respond to Webhook1": {
+    "Webhook: ACK Request Receipt": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Merge: Combine Reply Streams",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Respond to Webhook": {
+    "Webhook: Send Early Response": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Merge: Combine Reply Streams",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Respond to Webhook2": {
+    "Webhook: Return Unsupported Intent": {
       "main": [
         [
           {
-            "node": "Merge1",
+            "node": "Merge: Combine Reply Streams",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Edit Fields2": {
+    "Set: Prepare Draft Metadata": {
       "main": [
         [
           {
-            "node": "Respond to Webhook2",
+            "node": "Webhook: Return Unsupported Intent",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If2": {
+    "IF: Should Send via Gmail API": {
       "main": [
         [
           {
-            "node": "Merge2",
+            "node": "Merge: Attach Draft Metadata",
             "type": "main",
             "index": 1
           }
         ],
         [
           {
-            "node": "Edit Fields2",
+            "node": "Set: Prepare Draft Metadata",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "code: create draft": {
+    "Code: Build Gmail Draft": {
       "main": [
         [
           {
-            "node": "HTTP Request1",
+            "node": "HTTP: Fetch Draft Thread",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript2": {
+    "Code: Encode Draft MIME": {
       "main": [
         [
           {
-            "node": "Merge2",
+            "node": "Merge: Attach Draft Metadata",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Merge2": {
+    "Merge: Attach Draft Metadata": {
       "main": [
         [
           {
-            "node": "Edit Fields3",
+            "node": "Set: Prepare Webhook Success Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields3": {
+    "Set: Prepare Webhook Success Payload": {
       "main": [
         [
           {
-            "node": "code: create draft",
+            "node": "Code: Build Gmail Draft",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HTTP Request1": {
+    "HTTP: Fetch Draft Thread": {
       "main": [
         [
           {
-            "node": "Respond to Webhook4",
+            "node": "Webhook: Return Success Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields1": {
+    "Set: Prepare Refresh Request": {
       "main": [
         [
           {
-            "node": "Get User ID1",
+            "node": "Supabase: Lookup User (Alt Path)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Exchange Refresh Token1": {
+    "HTTP: Refresh Gmail Token (Alt Path)": {
       "main": [
         [
           {
-            "node": "Set Access Token1",
+            "node": "Set: Inject Access Token (Alt Path)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get User ID1": {
+    "Supabase: Lookup User (Alt Path)": {
       "main": [
         [
           {
-            "node": "Exchange Refresh Token1",
+            "node": "HTTP: Refresh Gmail Token (Alt Path)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set Access Token1": {
+    "Set: Inject Access Token (Alt Path)": {
       "main": [
         [
           {
-            "node": "List Messages for Context",
+            "node": "HTTP: Search Gmail Thread Context",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Pinecone Vector Store": {
+    "Pinecone: Upsert Memory Chunk": {
       "ai_tool": [
         [
           {
-            "node": "AI Agent - Context Aware",
+            "node": "Agent: Generate Context Answer",
             "type": "ai_tool",
             "index": 0
           }
         ]
       ]
     },
-    "Embeddings OpenAI": {
+    "OpenAI: Embed Memory Chunk": {
       "ai_embedding": [
         [
           {
-            "node": "Pinecone Vector Store",
+            "node": "Pinecone: Upsert Memory Chunk",
             "type": "ai_embedding",
             "index": 0
           }
         ]
       ]
     },
-    "Code: Filter CATEGORY_PERSONAL": {
+    "Code: Filter Personal Emails": {
       "main": [
         [
           {
-            "node": "Code - decode base64",
+            "node": "Code: Decode Gmail Payload",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Reranker Cohere": {
+    "Cohere: Rerank Memory Candidates": {
       "ai_reranker": [
         []
       ]
     },
-    "Code: Filter CATEGORY_PERSONAL1": {
+    "Code: Filter Reranked Results": {
       "main": [
         [
           {
-            "node": "Code",
+            "node": "Code: Prepare Context Messages",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI Chat Model4": {
+    "OpenAI: Generate Summarized Reply": {
       "ai_languageModel": [
         [
           {
-            "node": "Vector Store Retrieval1",
+            "node": "Vector Store: Retrieve Pinecone Context",
             "type": "ai_languageModel",
             "index": 0
           }

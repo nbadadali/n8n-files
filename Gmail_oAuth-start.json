@@ -22,7 +22,7 @@
         },
         "options": {}
       },
-      "name": "Set: PKCE Inputs",
+      "name": "Set: Initialize PKCE Parameters",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
@@ -37,7 +37,7 @@
         "value": "={{ $json.code_verifier }}",
         "encoding": "base64"
       },
-      "name": "Crypto: SHA256 code_verifier",
+      "name": "Crypto: Derive Code Challenge",
       "type": "n8n-nodes-base.crypto",
       "typeVersion": 1,
       "position": [
@@ -75,7 +75,7 @@
         },
         "options": {}
       },
-      "name": "Set: code_challenge (base64url)",
+      "name": "Set: Format Code Challenge",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
@@ -87,12 +87,12 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \n  \"state\": \"{{ $('Set: PKCE Inputs').item.json.state }}\", \n  \"code_challenge\": \"{{ $('Set: code_challenge (base64url)').item.json.code_challenge }}\",\n  \"code_challenge_method\": \"{{ $('Set: code_challenge (base64url)').item.json.code_challenge_method }}\" \n} ",
+        "responseBody": "={ \n  \"state\": \"{{ $('Set: Initialize PKCE Parameters').item.json.state }}\", \n  \"code_challenge\": \"{{ $('Set: Format Code Challenge').item.json.code_challenge }}\",\n  \"code_challenge_method\": \"{{ $('Set: Format Code Challenge').item.json.code_challenge_method }}\" \n} ",
         "options": {
           "responseCode": 200
         }
       },
-      "name": "Respond: PKCE to extension",
+      "name": "Webhook: Return PKCE Bundle",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
@@ -112,7 +112,7 @@
         128
       ],
       "id": "e85628a5-1abd-4aba-9786-f7a3070e53dc",
-      "name": "Code: Generate randoms"
+      "name": "Code: Generate State Bundle"
     },
     {
       "parameters": {
@@ -126,15 +126,15 @@
           "parameters": [
             {
               "name": "=created_at",
-              "value": "={{ $('Set: PKCE Inputs').item.json.created_at }}"
+              "value": "={{ $('Set: Initialize PKCE Parameters').item.json.created_at }}"
             },
             {
               "name": "state",
-              "value": "={{ $('Set: PKCE Inputs').item.json.state }}"
+              "value": "={{ $('Set: Initialize PKCE Parameters').item.json.state }}"
             },
             {
               "name": "code_verifier",
-              "value": "={{ $('Set: PKCE Inputs').item.json.code_verifier }}"
+              "value": "={{ $('Set: Initialize PKCE Parameters').item.json.code_verifier }}"
             },
             {
               "name": "used",
@@ -144,7 +144,7 @@
         },
         "options": {}
       },
-      "name": "Supabase: Insert oauth_state",
+      "name": "HTTP: Store OAuth State",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
       "position": [
@@ -159,7 +159,7 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "name": "Webhook: /oauth/start",
+      "name": "Webhook: Handle OAuth Start",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
@@ -172,66 +172,66 @@
   ],
   "pinData": {},
   "connections": {
-    "Set: PKCE Inputs": {
+    "Set: Initialize PKCE Parameters": {
       "main": [
         [
           {
-            "node": "Crypto: SHA256 code_verifier",
+            "node": "Crypto: Derive Code Challenge",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Crypto: SHA256 code_verifier": {
+    "Crypto: Derive Code Challenge": {
       "main": [
         [
           {
-            "node": "Set: code_challenge (base64url)",
+            "node": "Set: Format Code Challenge",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Set: code_challenge (base64url)": {
+    "Set: Format Code Challenge": {
       "main": [
         [
           {
-            "node": "Supabase: Insert oauth_state",
+            "node": "HTTP: Store OAuth State",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code: Generate randoms": {
+    "Code: Generate State Bundle": {
       "main": [
         [
           {
-            "node": "Set: PKCE Inputs",
+            "node": "Set: Initialize PKCE Parameters",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Supabase: Insert oauth_state": {
+    "HTTP: Store OAuth State": {
       "main": [
         [
           {
-            "node": "Respond: PKCE to extension",
+            "node": "Webhook: Return PKCE Bundle",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Webhook: /oauth/start": {
+    "Webhook: Handle OAuth Start": {
       "main": [
         [
           {
-            "node": "Code: Generate randoms",
+            "node": "Code: Generate State Bundle",
             "type": "main",
             "index": 0
           }

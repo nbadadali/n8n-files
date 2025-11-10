@@ -15,7 +15,7 @@
         32
       ],
       "id": "7da73050-c534-4f28-a972-279406fdd3aa",
-      "name": "Webhook",
+      "name": "Webhook: Receive Feedback",
       "webhookId": "9516e29f-a551-4224-9076-2d1bad6bee88"
     },
     {
@@ -33,7 +33,7 @@
         -160
       ],
       "id": "e91aca20-426f-4c29-8f4f-8a9612110f68",
-      "name": "Send a message",
+      "name": "Gmail: Notify Team",
       "webhookId": "c6edc033-51f6-44d1-9e5d-d5380c1f9cb0",
       "credentials": {
         "gmailOAuth2": {
@@ -53,7 +53,7 @@
         -160
       ],
       "id": "63e033e5-2f31-4c53-bfdf-ee372265e7c1",
-      "name": "Respond to Webhook"
+      "name": "Webhook: Acknowledge Receipt"
     },
     {
       "parameters": {
@@ -73,13 +73,13 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Name": "={{ $('Webhook').item.json.body.name }}",
-            "Designation": "={{ $('Webhook').item.json.body.designation }}",
-            "Review": "={{ $('Webhook').item.json.body.experience }}",
-            "Improvement": "={{ $('Webhook').item.json.body.improvement }}",
+            "Name": "={{ $('Webhook: Receive Feedback').item.json.body.name }}",
+            "Designation": "={{ $('Webhook: Receive Feedback').item.json.body.designation }}",
+            "Review": "={{ $('Webhook: Receive Feedback').item.json.body.experience }}",
+            "Improvement": "={{ $('Webhook: Receive Feedback').item.json.body.improvement }}",
             "Photo": "={{ $json.webViewLink }}",
-            "UserID": "={{ $('Webhook').item.json.body.userId }}",
-            "Email ID": "={{ $('Webhook').item.json.body.email }}"
+            "UserID": "={{ $('Webhook: Receive Feedback').item.json.body.userId }}",
+            "Email ID": "={{ $('Webhook: Receive Feedback').item.json.body.email }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -161,7 +161,7 @@
         -160
       ],
       "id": "81b9e289-397d-41e7-ad3e-f7db40bcbdbe",
-      "name": "Append row in sheet",
+      "name": "Google Sheets: Log Feedback",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "DkBhqb6cZpEqDKCj",
@@ -180,7 +180,7 @@
         -160
       ],
       "id": "41d8e706-1e06-4ee4-b125-80cfff6340b3",
-      "name": "Code in JavaScript"
+      "name": "Code: Prepare Drive Upload"
     },
     {
       "parameters": {
@@ -206,7 +206,7 @@
         -160
       ],
       "id": "5a14bb1b-e1d6-4e9a-9f8d-653843ed4da5",
-      "name": "Upload file",
+      "name": "Google Drive: Store Attachment",
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "VyJ6ljVuT4WtvU6r",
@@ -229,7 +229,7 @@
         32
       ],
       "id": "75618bf3-fe4a-49b5-9f70-539995ee014a",
-      "name": "Send a message1",
+      "name": "Gmail: Send User Confirmation",
       "webhookId": "c6edc033-51f6-44d1-9e5d-d5380c1f9cb0",
       "credentials": {
         "gmailOAuth2": {
@@ -249,7 +249,7 @@
         32
       ],
       "id": "deaa5359-2676-413b-a065-13adc386456d",
-      "name": "Respond to Webhook1"
+      "name": "Webhook: Return Confirmation"
     },
     {
       "parameters": {
@@ -269,9 +269,9 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "Name": "={{ $('Webhook').item.json.body.name }}",
-            "Email Id": "={{ $('Webhook').item.json.body.email }}",
-            "Issue": "={{ $('Webhook').item.json.body.description }}",
+            "Name": "={{ $('Webhook: Receive Feedback').item.json.body.name }}",
+            "Email Id": "={{ $('Webhook: Receive Feedback').item.json.body.email }}",
+            "Issue": "={{ $('Webhook: Receive Feedback').item.json.body.description }}",
             "Photo": "={{ $json.webViewLink }}"
           },
           "matchingColumns": [],
@@ -339,7 +339,7 @@
         32
       ],
       "id": "de5ed38d-cb3d-48f7-9226-d59a4a63c062",
-      "name": "Append row in sheet1",
+      "name": "Google Sheets: Log Issue Details",
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "DkBhqb6cZpEqDKCj",
@@ -358,7 +358,7 @@
         32
       ],
       "id": "8ad87ed4-bdba-4d1c-ad6c-bc59f6616779",
-      "name": "Code in JavaScript1"
+      "name": "Code: Prepare Secondary Upload"
     },
     {
       "parameters": {
@@ -384,7 +384,7 @@
         32
       ],
       "id": "d4d14bad-5181-4fc4-bb39-088a8b066319",
-      "name": "Upload file1",
+      "name": "Google Drive: Store Secondary Attachment",
       "credentials": {
         "googleDriveOAuth2Api": {
           "id": "VyJ6ljVuT4WtvU6r",
@@ -475,7 +475,7 @@
         16
       ],
       "id": "c809e701-1e4f-4d27-9631-025ad4a70797",
-      "name": "Switch"
+      "name": "Switch: Branch by Feedback Type"
     },
     {
       "parameters": {
@@ -492,7 +492,7 @@
         224
       ],
       "id": "aa84d432-9f58-433d-be49-32d16a272dc7",
-      "name": "Send a message2",
+      "name": "Gmail: Escalate Critical Issue",
       "webhookId": "c6edc033-51f6-44d1-9e5d-d5380c1f9cb0",
       "credentials": {
         "gmailOAuth2": {
@@ -512,140 +512,140 @@
         224
       ],
       "id": "80338aa6-a140-4387-9436-7f587e2c4409",
-      "name": "Respond to Webhook2"
+      "name": "Webhook: Return Escalation Status"
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook": {
+    "Webhook: Receive Feedback": {
       "main": [
         [
           {
-            "node": "Switch",
+            "node": "Switch: Branch by Feedback Type",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Send a message": {
+    "Gmail: Notify Team": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "Webhook: Acknowledge Receipt",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Append row in sheet": {
+    "Google Sheets: Log Feedback": {
       "main": [
         [
           {
-            "node": "Send a message",
+            "node": "Gmail: Notify Team",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript": {
+    "Code: Prepare Drive Upload": {
       "main": [
         [
           {
-            "node": "Upload file",
+            "node": "Google Drive: Store Attachment",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload file": {
+    "Google Drive: Store Attachment": {
       "main": [
         [
           {
-            "node": "Append row in sheet",
+            "node": "Google Sheets: Log Feedback",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Send a message1": {
+    "Gmail: Send User Confirmation": {
       "main": [
         [
           {
-            "node": "Respond to Webhook1",
+            "node": "Webhook: Return Confirmation",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Append row in sheet1": {
+    "Google Sheets: Log Issue Details": {
       "main": [
         [
           {
-            "node": "Send a message1",
+            "node": "Gmail: Send User Confirmation",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript1": {
+    "Code: Prepare Secondary Upload": {
       "main": [
         [
           {
-            "node": "Upload file1",
+            "node": "Google Drive: Store Secondary Attachment",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload file1": {
+    "Google Drive: Store Secondary Attachment": {
       "main": [
         [
           {
-            "node": "Append row in sheet1",
+            "node": "Google Sheets: Log Issue Details",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch": {
+    "Switch: Branch by Feedback Type": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Code: Prepare Drive Upload",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Code in JavaScript1",
+            "node": "Code: Prepare Secondary Upload",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Send a message2",
+            "node": "Gmail: Escalate Critical Issue",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Send a message2": {
+    "Gmail: Escalate Critical Issue": {
       "main": [
         [
           {
-            "node": "Respond to Webhook2",
+            "node": "Webhook: Return Escalation Status",
             "type": "main",
             "index": 0
           }
