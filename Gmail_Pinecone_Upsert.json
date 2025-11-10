@@ -1,0 +1,246 @@
+{
+  "name": "Gmail Pinecone Upsert",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "={{$env.PINECONE_INDEX}}",
+          "mode": "id"
+        },
+        "options": {
+          "pineconeNamespace": "={{ $('Webhook').item.json.body.user_id }}-ns"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "90e85722-b3d3-4403-a708-615855734e43",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "mX5Mp9fM0gydbhMt",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $('Code').item.json.pageContent }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "id",
+                "value": "={{ $('Code').item.json.metadata.id }}"
+              },
+              {
+                "name": "thread_id",
+                "value": "={{ $('Code').item.json.metadata.thread_id }}"
+              },
+              {
+                "name": "labelIds",
+                "value": "={{ $('Code').item.json.metadata.labelIds }}"
+              },
+              {
+                "name": "sender_email",
+                "value": "={{ $('Code').item.json.metadata.sender_email }}"
+              },
+              {
+                "name": "receiver_email",
+                "value": "={{ $('Code').item.json.metadata.receiver_email }}"
+              },
+              {
+                "name": "subject",
+                "value": "={{ $('Code').item.json.metadata.subject }}"
+              },
+              {
+                "name": "date",
+                "value": "={{ $('Code').item.json.metadata.date }}"
+              },
+              {
+                "name": "date_epoch",
+                "value": "={{ $('Code').item.json.metadata.date_epoch }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        96,
+        176
+      ],
+      "id": "de3996fc-42aa-42fe-8828-147beb694c85",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -80,
+        208
+      ],
+      "id": "13b3a74a-b667-406b-8a0f-69e281693f0e",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chunkSize": 300,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        288,
+        352
+      ],
+      "id": "f2c5e591-f52d-447e-bd4a-29b0acaf3285",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "={{$env.N8N_WEBHOOK_BASE_URL4}}",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        16
+      ],
+      "id": "90beb127-f3f8-42ff-afed-796e106dc40a",
+      "name": "Webhook",
+      "webhookId": "19b9566f-9e11-4015-a6b6-464fa02b212c"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node — Build Pinecone docs from webhook/email items\n// Handles shapes like: item.json.body.emails[], item.json.emails[], or a single email object\n\nconst MAX_BODY_CHARS = 20000; // optional safeguard\n\n// ---------- helpers ----------\nfunction decodeB64(s) {\n  try { return Buffer.from(String(s || ''), 'base64').toString('utf8'); }\n  catch { return ''; }\n}\n\nfunction parseMaybeJsonArray(v) {\n  if (Array.isArray(v)) return v;\n  if (typeof v === 'string') {\n    try {\n      const p = JSON.parse(v);\n      return Array.isArray(p) ? p : [v];\n    } catch {\n      return v.includes(',') ? v.split(',').map(s => s.trim()).filter(Boolean) : [v];\n    }\n  }\n  return [];\n}\n\nfunction computeEpochMs(dateVal) {\n  if (!dateVal) return null;\n  const s = String(dateVal);\n  if (/^\\d+$/.test(s)) {\n    const n = Number(s);\n    return Number.isFinite(n) ? n : null;\n  }\n  const t = Date.parse(s);\n  return Number.isNaN(t) ? null : t;\n}\n\n// ---------- MIME / header decoding helpers ----------\nfunction decodeMimeWord(word) {\n  // Decodes =?charset?Q?...?= and =?charset?B?...?=\n  // Minimal, but handles most UTF-8 cases seen in Gmail headers\n  try {\n    const m = String(word).match(/^=\\?([^?]+)\\?([bBqQ])\\?([^?]+)\\?=$/);\n    if (!m) return word;\n    const charset = m[1].toLowerCase();\n    const enc = m[2].toLowerCase();\n    let data = m[3];\n\n    let buf;\n    if (enc === 'b') {\n      buf = Buffer.from(data, 'base64');\n    } else {\n      // Q-encoding: \"_\" => space; \"=HH\" => byte\n      data = data.replace(/_/g, ' ').replace(/=([0-9A-Fa-f]{2})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));\n      buf = Buffer.from(data, 'binary');\n    }\n\n    // Assume UTF-8; if not, still returns something usable\n    return buf.toString(charset === 'utf-8' ? 'utf8' : 'utf8');\n  } catch {\n    return word;\n  }\n}\n\nfunction decodeMimeWords(s) {\n  // Decode sequences of encoded words\n  return String(s).replace(/=\\?[^?]+\\?[bBqQ]\\?[^?]+\\?=/g, (w) => decodeMimeWord(w));\n}\n\nfunction stripOuterQuotes(s) {\n  // Remove straight & smart quotes at ends\n  return String(s).trim().replace(/^[\\\"'\\u2018\\u2019\\u201C\\u201D]+|[\\\"'\\u2018\\u2019\\u201C\\u201D]+$/g, '').trim();\n}\n\n// Get a header's value (case-insensitive) from Gmail payload.headers[]\nfunction getHeader(headers, key) {\n  if (!Array.isArray(headers)) return \"\";\n  const h = headers.find(h => String(h.name || \"\").toLowerCase() === String(key).toLowerCase());\n  return h?.value || \"\";\n}\n\n// If a header contains multiple addresses, take the first one safely\nfunction firstAddress(headerVal) {\n  if (!headerVal) return \"\";\n  // split on commas not inside quotes or <>\n  const parts = String(headerVal)\n    .split(/,(?=(?:[^<]*<[^>]*>)*[^>]*$)/)\n    .map(s => s.trim())\n    .filter(Boolean);\n  return parts[0] || \"\";\n}\n\n// Robust parsing of name/email from a header token\nfunction extractNameEmail(input) {\n  if (!input) return { name: \"\", email: \"\" };\n\n  // Some sources give objects {name, email}\n  if (typeof input === \"object\") {\n    return { name: input.name ?? \"\", email: input.email ?? \"\" };\n  }\n\n  let s = decodeMimeWords(String(input).trim());\n\n  // Case 1: \"Name\" <email@x>\n  const mBracket = s.match(/^(.*)<([^>]+)>$/);\n  if (mBracket) {\n    const rawName = stripOuterQuotes(mBracket[1]);\n    const email = mBracket[2].trim();\n    const name = stripOuterQuotes(rawName);\n    return { name, email };\n  }\n\n  // Case 2: Encoded-name without brackets: =?UTF-8?Q?...?= email@x\n  // Try to pull the first email token\n  const mEmail = s.match(/[^\\s<>\"']+@[^\\s<>\"']+/);\n  if (mEmail) {\n    const email = mEmail[0];\n    // Remove the email token from the string to get a prospective name\n    const nameCandidate = stripOuterQuotes(s.replace(email, '').replace(/[\\(\\)]/g, '').trim());\n    return { name: nameCandidate || \"\", email };\n  }\n\n  // Fallback: treat entire string as an email\n  return { name: \"\", email: s };\n}\n\n// ---------- main ----------\nconst out = [];\n\nfor (const item of items) {\n  const j = item.json || {};\n\n  // Normalize to an array of email objects\n  const emails =\n    Array.isArray(j?.body?.emails) ? j.body.emails :\n    Array.isArray(j?.emails)       ? j.emails :\n    (j.id || j.subject || j.body_base64 || j?.payload?.headers ? [j] : []); // include Gmail message shape\n\n  for (const e of emails) {\n    const id        = e.id || e.message_id || e.gmail_id || '';\n    const thread_id = e.thread_id || e.threadId || '';\n\n    // Prefer headers when available (Gmail message shape)\n    const headers   = e?.payload?.headers || j?.payload?.headers || [];\n\n    let subject     = e.subject || getHeader(headers, \"Subject\") || \"(no subject)\";\n    const dateStr   = e.date || e.internalDate || getHeader(headers, \"Date\") || '';\n    const date_epoch = computeEpochMs(dateStr);\n\n    const labelIds  = Array.isArray(e.labelIds) ? e.labelIds : parseMaybeJsonArray(e.labelIds);\n\n    // ----- Sender/Receiver: USE PRE-MAPPED FIELDS (no header parsing here) -----\n    const sender_name    = e.sender_name ?? \"\";\n    const sender_email   = e.sender_email ?? (e.from ?? \"\");\n    const receiver_name  = e.receiver_name ?? \"\";\n    const receiver_email = e.receiver_email ?? (e.to ?? \"\");\n\n    // Body sources (prefer decoded base64 if present)\n    let body = '';\n    if (e.body_base64) body = decodeB64(e.body_base64);\n    else if (e.body)   body = String(e.body);\n    else if (e.snippet) body = String(e.snippet);\n\n    if (body.length > MAX_BODY_CHARS) {\n      body = body.slice(0, MAX_BODY_CHARS) + '\\n...[truncated]...';\n    }\n\n    const headerBlock = [\n      `Subject: ${subject || '(no subject)'}`,\n      `From: ${sender_name ? `${sender_name} <${sender_email}>` : sender_email}`,\n      `To: ${receiver_name ? `${receiver_name} <${receiver_email}>` : receiver_email}`,\n      `Date: ${dateStr || ''}`,\n      `Labels: ${Array.isArray(labelIds) ? labelIds.join(',') : ''}`\n    ].join('\\n');\n\n    const pageContent = `${headerBlock}\\n\\n${body || ''}`.trim();\n\n    const metadata = {\n      id: String(id || ''),\n      thread_id: String(thread_id || ''),\n      labelIds,\n      sender_email,\n      sender_name,\n      receiver_email,\n      subject: subject || '(no subject)',\n      date: String(dateStr || ''),\n      date_epoch: date_epoch ?? null,\n      source: 'gmail',\n    };\n\n    out.push({ json: { pageContent, metadata } });\n  }\n}\n\nreturn out;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        16
+      ],
+      "id": "4d0d7d47-b02e-4cac-9b49-304b4b07e1fa",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "pinecone update successful",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        496,
+        0
+      ],
+      "id": "ad0e86e7-6358-4123-9c9a-187ab8af978b",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3e4b8797-3407-46c2-92b3-90475a90fabb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "RoplooGZrBPQfskQ",
+  "tags": []
+}

@@ -1,0 +1,171 @@
+{
+  "name": "Credit-Tracking",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Credit-Tracking",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -368,
+        0
+      ],
+      "id": "53630696-e48e-404a-83d3-6f91e1285bc3",
+      "name": "Webhook",
+      "webhookId": "5040c9a5-95be-42c4-bc97-33bf70052f59"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Credit tracking",
+        "limit": 200,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "User_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.User_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        48,
+        0
+      ],
+      "id": "384c68f9-c62a-4bb0-8987-56a32e404a78",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node — sum Credits per user and emit required shape\n\nconst items = $input.all();\nconst totals = new Map();\n\nfor (const { json } of items) {\n  // normalize keys to lower-case for simple matching\n  const row = {};\n  for (const [k, v] of Object.entries(json)) row[k.toLowerCase()] = v;\n\n  // user id can be huge -> keep as string to avoid JS precision issues\n  const uidRaw = row.user_id ?? row['user-id'] ?? row.userid ?? row.uid;\n  if (uidRaw === undefined || uidRaw === null) continue;\n  const uid = String(uidRaw);\n\n  // credits field (supports \"Credits\" or \"credits\"); positive=consumed, negative -> flip to positive\n  const cRaw = row.credits ?? row.totalcreditsconsumed ?? row.debits ?? 0;\n  const cNum = Number(cRaw);\n  if (!Number.isFinite(cNum)) continue;\n\n  const consumed = cNum < 0 ? -cNum : cNum; // handle negatives if you ever send them\n  totals.set(uid, (totals.get(uid) ?? 0) + consumed);\n}\n\n// If nothing matched, return a helpful note with seen keys\nif (totals.size === 0) {\n  return [{\n    json: {\n      \"user-id\": null,\n      totalCreditsConsumed: 0,\n      status: \"success\",\n      note: `No Credits found. Saw keys: ${Object.keys($input.first()?.json ?? {})}`\n    }\n  }];\n}\n\n// Emit one item per user\nreturn [...totals.entries()].map(([uid, sum]) => ({\n  json: {\n    \"user-id\": uid,\n    totalCreditsConsumed: Math.round(sum),\n    status: \"success\"\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        0
+      ],
+      "id": "fee38a78-5570-4861-8be9-2ab0d182be0c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        464,
+        0
+      ],
+      "id": "ca8b80a6-5c32-4fab-b6b0-7f0a36a12c17",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "tableId": "Credit tracking",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "User_id",
+              "fieldValue": "={{ $json.body.userId }}"
+            },
+            {
+              "fieldId": "Credits",
+              "fieldValue": "={{ $json.body.creditsUsed }}"
+            },
+            {
+              "fieldId": "Prompt",
+              "fieldValue": "={{ $json.body.prompt }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "65949c74-d42f-4098-b507-222c620fef6c",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8045252c-8dee-4599-a0af-60ea057f9842",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "bl6jrUyazt26pP7n",
+  "tags": []
+}

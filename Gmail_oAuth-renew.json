@@ -1,0 +1,382 @@
+{
+  "name": "Gmail oAuth - renew",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "\n// Parse Authorization header and prepare signing_input for HMAC verify (no crypto here)\nfunction b64urlDecode(str){\n  str = (str || '').replace(/-/g,'+').replace(/_/g,'/');\n  const pad = str.length % 4; if (pad) str += '='.repeat(4-pad);\n  try {\n    return Buffer.from(str, 'base64').toString('utf8');\n  } catch (e) {\n    return null;\n  }\n}\nconst headers = $json.headers || {};\nconst auth = headers.authorization || headers.Authorization || '';\nif (!auth.startsWith('Bearer ')) {\n  return [{ json: { ok: false, error: 'missing_authorization' } }];\n}\nconst token = auth.slice(7).trim();\nconst parts = token.split('.');\nif (parts.length !== 3) {\n  return [{ json: { ok: false, error: 'malformed_jwt' } }];\n}\nconst [h, p, s] = parts;\nconst headerJson = b64urlDecode(h);\nconst payloadJson = b64urlDecode(p);\nif (!headerJson || !payloadJson) {\n  return [{ json: { ok: false, error: 'bad_jwt_parts' } }];\n}\nlet header, payload;\ntry { header = JSON.parse(headerJson); } catch { header = null; }\ntry { payload = JSON.parse(payloadJson); } catch { payload = null; }\nif (!header || !payload) {\n  return [{ json: { ok: false, error: 'bad_jwt_json' } }];\n}\nif (header.alg !== 'HS256') {\n  // Only support HS256 like the callback flow\n  return [{ json: { ok: false, error: 'unsupported_alg' } }];\n}\nconst sub = payload.sub || null;\nif (!sub) {\n  return [{ json: { ok: false, error: 'missing_sub' } }];\n}\nreturn [{\n  json: {\n    ok: true,\n    header_b64: h,\n    payload_b64: p,\n    signature_b64url: s,\n    signing_input: `${h}.${p}`,\n    sub,\n    email: payload.email || null\n  }\n}];\n"
+      },
+      "id": "662c0b0c-75d7-42bd-8370-52fb4691c6ee",
+      "name": "Code: Parse JWT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -704,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.signing_input }}",
+        "secret": "={{ $env.N8N_JWT_SECRET }}",
+        "encoding": "base64"
+      },
+      "id": "78693bcf-152e-4723-8f7f-6ef4d52b2253",
+      "name": "Crypto: HMAC verify",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Convert base64 to base64url and compare with provided signature\nfunction toB64Url(b64){\n  return (b64 || '')\n    .replace(/=/g,'')\n    .replace(/\\+/g,'-')\n    .replace(/\\//g,'_');\n}\nconst expectedSigUrl = toB64Url($json.data);\nconst provided = $items('Code: Parse JWT')[0].json.signature_b64url;\nconst ok = expectedSigUrl === provided;\n\nreturn [{\n  json: {\n    ok,\n    sub: $items('Code: Parse JWT')[0].json.sub,\n    email: $items('Code: Parse JWT')[0].json.email || null\n  }\n}];\n"
+      },
+      "id": "eb067aa5-805c-4d90-88c3-2fac3eadc4eb",
+      "name": "Code: Compare signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nfunction b64url(input) {\n  return Buffer.from(JSON.stringify(input))\n    .toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\nconst now = Math.floor(Date.now()/1000);\n\n// Prefer Supabase values if present\nlet sub = $items('Code: Compare signature')[0].json.sub;\nlet email = $items('Code: Compare signature')[0].json.email || null;\n\nif (Array.isArray($items('Supabase: Confirm user exists')[0]?.json) &&\n    $items('Supabase: Confirm user exists')[0].json.length) {\n  const row = $items('Supabase: Confirm user exists')[0].json[0];\n  sub = row.user_id || sub;\n  email = row.email || email;\n}\n\nconst header = { alg: 'HS256', typ: 'JWT' };\nconst payload = { sub, email, scope: ['chat:read','chat:write'], iat: now, exp: now + 600 };\n\nconst h = b64url(header);\nconst p = b64url(payload);\n\nreturn [{\n  json: {\n    header_b64: h,\n    payload_b64: p,\n    signing_input: `${h}.${p}`,\n    sub\n  }\n}];\n"
+      },
+      "id": "22be1cc9-79ed-45a2-811e-7a20dfac0605",
+      "name": "Code: Build JWT Header & Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.signing_input }}",
+        "secret": "={{ $env.N8N_JWT_SECRET }}",
+        "encoding": "base64"
+      },
+      "id": "5f1ff501-08e1-4c54-b5b4-8df17ff54de0",
+      "name": "Crypto: Sign JWT",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        800,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst sig = ($json.data || '')\n  .replace(/=/g, '')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_');\nreturn [{\n  json: {\n    userId: $json.sub,\n    jwt: `${$json.header_b64}.${$json.payload_b64}.${sig}`\n  }\n}];\n"
+      },
+      "id": "42e60326-6b62-4dc2-b951-f6902a299ef6",
+      "name": "Code: Assemble JWT",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "={{$env.N8N_WEBHOOK_BASE_URL3}}",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7334de8b-88df-4f60-bdc2-d3c6c9047557",
+      "name": "Webhook: /session/renew",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        544
+      ],
+      "webhookId": "02d61078-8afb-4f89-a2a4-0317ef6b1053"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "3bf46751-6212-44bb-b18a-386fe1d9ac45",
+              "leftValue": "={{ $json.user_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        528
+      ],
+      "id": "57094c64-6569-43cf-9267-d9af67fade63",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"error\": \"unauthorized\" }",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "ef26b9bc-483f-40c6-ae95-d9cc14e541da",
+      "name": "Respond: 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        128,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"error\": \"User not found\" }",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "33d4746f-ebd1-4b89-b418-5478f9802b31",
+      "name": "Respond: 404",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        576,
+        704
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "454aeb77-95b8-4ba7-a6a1-b069a936f882",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -112,
+        544
+      ],
+      "id": "1f567eaf-3d73-4c99-b730-0b8c2f1447ff",
+      "name": "IF: signature valid"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/users?user_id=eq.{{$json.sub}}&select=user_id,email",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\",\n  \"Prefer\": \"resolution=merge-duplicates,return=representation\"\n}\n",
+        "options": {}
+      },
+      "id": "4e6e1f1e-11ae-4cd9-a03f-859994ab164f",
+      "name": "Supabase: Confirm user exists",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        128,
+        528
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ok\",\n  \"userId\": \"{{$json.userId}}\",\n  \"token\": \"{{$json.jwt}}\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ec7dae38-1817-4e75-8cd0-36a27fa7f0fa",
+      "name": "Respond: new JWT",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1232,
+        512
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code: Parse JWT": {
+      "main": [
+        [
+          {
+            "node": "Crypto: HMAC verify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto: HMAC verify": {
+      "main": [
+        [
+          {
+            "node": "Code: Compare signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Compare signature": {
+      "main": [
+        [
+          {
+            "node": "IF: signature valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build JWT Header & Payload": {
+      "main": [
+        [
+          {
+            "node": "Crypto: Sign JWT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto: Sign JWT": {
+      "main": [
+        [
+          {
+            "node": "Code: Assemble JWT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Assemble JWT": {
+      "main": [
+        [
+          {
+            "node": "Respond: new JWT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: /session/renew": {
+      "main": [
+        [
+          {
+            "node": "Code: Parse JWT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code: Build JWT Header & Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond: 404",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: signature valid": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Confirm user exists",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond: 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Confirm user exists": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "870e46de-14e7-410c-8802-2cf26a020e34",
+  "meta": {
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "tVRkmXHRMuvIoAL5",
+  "tags": []
+}

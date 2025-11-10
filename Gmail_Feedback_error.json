@@ -1,0 +1,669 @@
+{
+  "name": "Gmail_Feedback_error",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Feedback_error",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -672,
+        32
+      ],
+      "id": "7da73050-c534-4f28-a972-279406fdd3aa",
+      "name": "Webhook",
+      "webhookId": "9516e29f-a551-4224-9076-2d1bad6bee88"
+    },
+    {
+      "parameters": {
+        "sendTo": "devangpandey9999@gmail.com, devang@saai.dev, nishantbadadali7@gmail.com",
+        "subject": "New Feedback from a user",
+        "emailType": "text",
+        "message": "=Here is the data -\nName - {{ $json.Name }}\nEmail ID - {{ $json[\"Email ID\"] }}\nReview - {{ $json.Review }}\nImprovement suggested - {{ $json.Improvement }}\nPhoto - {{ $json.Photo }}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        -160
+      ],
+      "id": "e91aca20-426f-4c29-8f4f-8a9612110f68",
+      "name": "Send a message",
+      "webhookId": "c6edc033-51f6-44d1-9e5d-d5380c1f9cb0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "vDbPp3uqFa7aaemd",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        672,
+        -160
+      ],
+      "id": "63e033e5-2f31-4c53-bfdf-ee372265e7c1",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1L_XP0_IdZ0lWmCXZmFsspY78UixXOZnvgDFw6ePpN5E/edit?gid=1772964919#gid=1772964919",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1772964919,
+          "mode": "list",
+          "cachedResultName": "Feedback",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1L_XP0_IdZ0lWmCXZmFsspY78UixXOZnvgDFw6ePpN5E/edit#gid=1772964919"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Webhook').item.json.body.name }}",
+            "Designation": "={{ $('Webhook').item.json.body.designation }}",
+            "Review": "={{ $('Webhook').item.json.body.experience }}",
+            "Improvement": "={{ $('Webhook').item.json.body.improvement }}",
+            "Photo": "={{ $json.webViewLink }}",
+            "UserID": "={{ $('Webhook').item.json.body.userId }}",
+            "Email ID": "={{ $('Webhook').item.json.body.email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "UserID",
+              "displayName": "UserID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email ID",
+              "displayName": "Email ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Designation",
+              "displayName": "Designation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Review",
+              "displayName": "Review",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Improvement",
+              "displayName": "Improvement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Photo",
+              "displayName": "Photo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        -160
+      ],
+      "id": "81b9e289-397d-41e7-ad3e-f7db40bcbdbe",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DkBhqb6cZpEqDKCj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node\n// Input: { \"imageBase64\": \"<your_base64_string>\", \"filename\": \"example.png\" }\n\nconst imageBase64 = $input.first().json.body.picture;\nconst filename = $input.first().json.body.name;\n\n// Convert base64 → Buffer\nconst buffer = Buffer.from(imageBase64.replace(/^data:image\\/\\w+;base64,/, ''), 'base64');\n\n// Return binary data\nreturn [\n  {\n    json: {\n      success: true,\n      filename\n    },\n    binary: {\n      data: {\n        data: buffer,\n        mimeType: 'image/png',\n        fileName: filename\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        -160
+      ],
+      "id": "41d8e706-1e06-4ee4-b125-80cfff6340b3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.filename }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1ABIWA5YPVnmcWQHLz8F9aYWQrkAmViKs",
+          "mode": "list",
+          "cachedResultName": "vIDEO",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1ABIWA5YPVnmcWQHLz8F9aYWQrkAmViKs"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        -160
+      ],
+      "id": "5a14bb1b-e1d6-4e9a-9f8d-653843ed4da5",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "VyJ6ljVuT4WtvU6r",
+          "name": "Dev"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "devangpandey9999@gmail.com, nishantbadadali7@gmail.com, devang@saai.dev",
+        "subject": "URGENT | New issue from a user",
+        "emailType": "text",
+        "message": "=Here is the infroamtion  -\nName - {{ $json.Name }}\nEmail ID - {{ $json[\"Email Id\"] }}\nReview - {{ $json.Issue }}\nSS- {{ $json.Photo }}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        448,
+        32
+      ],
+      "id": "75618bf3-fe4a-49b5-9f70-539995ee014a",
+      "name": "Send a message1",
+      "webhookId": "c6edc033-51f6-44d1-9e5d-d5380c1f9cb0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "vDbPp3uqFa7aaemd",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        672,
+        32
+      ],
+      "id": "deaa5359-2676-413b-a065-13adc386456d",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1L_XP0_IdZ0lWmCXZmFsspY78UixXOZnvgDFw6ePpN5E/edit?gid=1772964919#gid=1772964919",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Issues",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1L_XP0_IdZ0lWmCXZmFsspY78UixXOZnvgDFw6ePpN5E/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Webhook').item.json.body.name }}",
+            "Email Id": "={{ $('Webhook').item.json.body.email }}",
+            "Issue": "={{ $('Webhook').item.json.body.description }}",
+            "Photo": "={{ $json.webViewLink }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Id",
+              "displayName": "Email Id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Issue",
+              "displayName": "Issue",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Improvement",
+              "displayName": "Improvement",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Photo",
+              "displayName": "Photo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        32
+      ],
+      "id": "de5ed38d-cb3d-48f7-9226-d59a4a63c062",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DkBhqb6cZpEqDKCj",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code Node\n// Input: { \"imageBase64\": \"<your_base64_string>\", \"filename\": \"example.png\" }\n\nconst imageBase64 =$input.first().json.body.screenshots[0].data ;\nconst filename = $input.first().json.body.name;\n\n// Convert base64 → Buffer\nconst buffer = Buffer.from(imageBase64.replace(/^data:image\\/\\w+;base64,/, ''), 'base64');\n\n// Return binary data\nreturn [\n  {\n    json: {\n      success: true,\n      filename\n    },\n    binary: {\n      data: {\n        data: buffer,\n        mimeType: 'image/png',\n        fileName: filename\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        32
+      ],
+      "id": "8ad87ed4-bdba-4d1c-ad6c-bc59f6616779",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "name": "={{ $json.filename }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1ABIWA5YPVnmcWQHLz8F9aYWQrkAmViKs",
+          "mode": "list",
+          "cachedResultName": "vIDEO",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1ABIWA5YPVnmcWQHLz8F9aYWQrkAmViKs"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        0,
+        32
+      ],
+      "id": "d4d14bad-5181-4fc4-bb39-088a8b066319",
+      "name": "Upload file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "VyJ6ljVuT4WtvU6r",
+          "name": "Dev"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "dc4e4d3d-c84c-4097-98c3-e8482b5e48ae",
+                    "leftValue": "={{ $json.body.formType }}",
+                    "rightValue": "feedback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.formType }}",
+                    "rightValue": "issue",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "32f1a46d-6843-43e1-b578-e87fff9a4bb7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "6ddca9bc-c49a-46da-9e9d-9ae4d9fa0eac",
+                    "leftValue": "={{ $json.body.action }}",
+                    "rightValue": "data_cleared",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -448,
+        16
+      ],
+      "id": "c809e701-1e4f-4d27-9631-025ad4a70797",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "devangpandey9999@gmail.com, nishantbadadali7@gmail.com, devang@saai.dev",
+        "subject": "URGENT | User wants to delete data",
+        "emailType": "text",
+        "message": "=Here is the infroamtion  -\nUSER ID - {{ $json.body.userId }}\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -224,
+        224
+      ],
+      "id": "aa84d432-9f58-433d-be49-32d16a272dc7",
+      "name": "Send a message2",
+      "webhookId": "c6edc033-51f6-44d1-9e5d-d5380c1f9cb0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "vDbPp3uqFa7aaemd",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        224
+      ],
+      "id": "80338aa6-a140-4387-9436-7f587e2c4409",
+      "name": "Respond to Webhook2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Upload file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "b361f4bf-d703-47dc-b4d5-054f65d6ea8d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "6F262nC14sfSLLaE",
+  "tags": []
+}

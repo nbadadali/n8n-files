@@ -1,0 +1,252 @@
+{
+  "name": "Gmail oAuth - start",
+  "nodes": [
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "state",
+              "value": "={{ $json.state }}"
+            },
+            {
+              "name": "code_verifier",
+              "value": "={{ $json.code_verifier }}"
+            },
+            {
+              "name": "created_at",
+              "value": "={{ new Date().toISOString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set: PKCE Inputs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        384,
+        128
+      ],
+      "id": "c7d4c412-d943-4be3-bdbb-f925d6900ae8"
+    },
+    {
+      "parameters": {
+        "type": "SHA256",
+        "value": "={{ $json.code_verifier }}",
+        "encoding": "base64"
+      },
+      "name": "Crypto: SHA256 code_verifier",
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        592,
+        128
+      ],
+      "id": "9db7eb3a-f404-4abd-a178-1280c22bb0be"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "state",
+              "value": "={{ $item(0,'Set: PKCE Inputs').json.state }}"
+            },
+            {
+              "name": "code_verifier",
+              "value": "={{ $item(0,'Set: PKCE Inputs').json.code_verifier }}"
+            },
+            {
+              "name": "code_challenge",
+              "value": "={{ $json.data.replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'') }}"
+            },
+            {
+              "name": "code_challenge_method",
+              "value": "S256"
+            },
+            {
+              "name": "created_at",
+              "value": "={{ $item(0,'Set: PKCE Inputs').json.created_at }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set: code_challenge (base64url)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        784,
+        128
+      ],
+      "id": "10836940-08a6-40e1-b305-b2f39e9d3fc8"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \n  \"state\": \"{{ $('Set: PKCE Inputs').item.json.state }}\", \n  \"code_challenge\": \"{{ $('Set: code_challenge (base64url)').item.json.code_challenge }}\",\n  \"code_challenge_method\": \"{{ $('Set: code_challenge (base64url)').item.json.code_challenge_method }}\" \n} ",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Respond: PKCE to extension",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        128
+      ],
+      "id": "5736eeaf-ec8d-422b-b709-0f91845b2701"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate a random hexadecimal string of a given length\nfunction randHex(len) {\n  const hex = '0123456789abcdef';\n  let out = '';\n  for (let i = 0; i < len; i++) {\n    out += hex.charAt(Math.floor(Math.random() * hex.length));\n  }\n  return out;\n}\n\n// PKCE requires 43–128 chars for the verifier; we use 64\nconst code_verifier = randHex(64);\n\n// State can be shorter; use 32\nconst state = randHex(32);\n\nreturn [\n  {\n    json: {\n      state,\n      code_verifier,\n      created_at: new Date().toISOString(),\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        128
+      ],
+      "id": "e85628a5-1abd-4aba-9786-f7a3070e53dc",
+      "name": "Code: Generate randoms"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/oAuthStart",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\",\n  \"Prefer\": \"resolution=merge-duplicates,return=representation\"\n}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=created_at",
+              "value": "={{ $('Set: PKCE Inputs').item.json.created_at }}"
+            },
+            {
+              "name": "state",
+              "value": "={{ $('Set: PKCE Inputs').item.json.state }}"
+            },
+            {
+              "name": "code_verifier",
+              "value": "={{ $('Set: PKCE Inputs').item.json.code_verifier }}"
+            },
+            {
+              "name": "used",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Supabase: Insert oauth_state",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1008,
+        128
+      ],
+      "id": "f6b9141e-24e6-46e8-9666-86c2183fc7de"
+    },
+    {
+      "parameters": {
+        "path": "={{$env.N8N_WEBHOOK_BASE_URL1}}",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook: /oauth/start",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        128
+      ],
+      "id": "898c102c-34e3-4fc3-8468-18dc5b0c5501",
+      "webhookId": "99df76d2-8355-41fe-9993-17dd08a11aeb"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Set: PKCE Inputs": {
+      "main": [
+        [
+          {
+            "node": "Crypto: SHA256 code_verifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto: SHA256 code_verifier": {
+      "main": [
+        [
+          {
+            "node": "Set: code_challenge (base64url)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set: code_challenge (base64url)": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Insert oauth_state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Generate randoms": {
+      "main": [
+        [
+          {
+            "node": "Set: PKCE Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Insert oauth_state": {
+      "main": [
+        [
+          {
+            "node": "Respond: PKCE to extension",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook: /oauth/start": {
+      "main": [
+        [
+          {
+            "node": "Code: Generate randoms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "879eaf3c-70a0-4ee7-b7c0-c9d4f9f06cd4",
+  "meta": {
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "hq8ifstqmWX28ktg",
+  "tags": []
+}

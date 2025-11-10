@@ -1,0 +1,623 @@
+{
+  "name": "Gmail oAuth - callback",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "={{$env.N8N_WEBHOOK_BASE_URL2}}",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook: /oauth/callback",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        272,
+        368
+      ],
+      "id": "678539f3-0a4f-4936-ba73-f249fa8a76da",
+      "webhookId": "ef345685-0a2c-4cc9-89a8-25827ccdefda"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/oAuthStart?state=eq.{{ $json.query.state }}&used=is.false&select=state,code_verifier,created_at",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\"\n}",
+        "options": {}
+      },
+      "name": "Supabase: Get oauth_state by state",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        496,
+        368
+      ],
+      "id": "bbf33e58-f9fa-402a-ac6c-128717e0d7a6",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/oAuthStart?state=eq.{{ $json.state }}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\",\n  \"Prefer\": \"resolution=merge-duplicates,return=representation\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"used\": true\n}",
+        "options": {}
+      },
+      "name": "Supabase: Mark state used",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        944,
+        272
+      ],
+      "id": "0e8b4bb3-0db0-4810-af61-b569a7ef13bf"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/users",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\",\n  \"Prefer\": \"resolution=merge-duplicates,return=representation\"\n}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $json.user_id }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "refresh_token",
+              "value": "={{ $json.refresh_token }}"
+            },
+            {
+              "name": "expires_in",
+              "value": "={{ $json.expires_in }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Supabase: Upsert user",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1840,
+        272
+      ],
+      "id": "2ae3a6e3-924e-402e-866e-c31d9a7da9cd"
+    },
+    {
+      "parameters": {
+        "respondWith": "redirect",
+        "redirectURL": "={{$env.CHROME_EXTENSION_REDIRECT_URL}}/?jwt_token={{ $json.jwt }}&user_id={{ $json.userId }}&state={{ $('Webhook: /oauth/callback').item.json.query.state }}",
+        "options": {
+          "responseCode": 302
+        }
+      },
+      "name": "Respond: 302 → extension",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        3184,
+        176
+      ],
+      "id": "1e6a3571-320c-4284-bdff-b047d8f85ce1"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Invalid State",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "name": "Respond: 400 invalid_state",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        944,
+        464
+      ],
+      "id": "0f76d6ef-324e-42cc-8e02-8dadbcd28b35"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$env.GOOGLE_OAUTH_TOKEN_URL}}",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "code",
+              "value": "={{ $('Webhook: /oauth/callback').item.json.query.code }}"
+            },
+            {
+              "name": "client_id",
+              "value": "={{$env.GOOGLE_CLIENT_ID}}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{$env.GOOGLE_CLIENT_SECRET}}"
+            },
+            {
+              "name": "redirect_uri",
+              "value": "={{$env.GOOGLE_OAUTH_REDIRECT_URI}}"
+            },
+            {
+              "name": "grant_type",
+              "value": "authorization_code"
+            },
+            {
+              "name": "code_verifier",
+              "value": "={{ $json.code_verifier }}"
+            }
+          ]
+        },
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        }
+      },
+      "name": "HTTP: Exchange code → tokens",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        272
+      ],
+      "id": "92167c69-3f65-40b3-9b7b-9ffe454a188b",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Access id_token from previous node\nconst id_token = $json.id_token;\n\n// Check if it's defined\nif (!id_token) {\n  throw new Error(\"id_token is missing from OAuth response\");\n}\n\n// Split and decode the JWT\nconst parts = id_token.split(\".\");\nif (parts.length !== 3) {\n  throw new Error(\"Invalid id_token format\");\n}\n\nconst decoded = JSON.parse(Buffer.from(parts[1], \"base64\").toString(\"utf8\"));\n\nreturn [\n  {\n    json: {\n      decoded\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        272
+      ],
+      "id": "c82d36f7-d05b-4cc8-86b6-fb32adbf9d7b",
+      "name": "Code: Decode id_token"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9d8d10ef-8ecf-4d91-9c2d-06269addbd25",
+              "name": "access_token",
+              "value": "={{ $('HTTP: Exchange code → tokens').item.json.access_token }}",
+              "type": "string"
+            },
+            {
+              "id": "a1ff3f11-787b-4a91-8ce2-ab15be07f160",
+              "name": "refresh_token",
+              "value": "={{ $('HTTP: Exchange code → tokens').item.json.refresh_token }}",
+              "type": "string"
+            },
+            {
+              "id": "91c97189-c922-4335-a0bc-30a42adcc93d",
+              "name": "expires_in",
+              "value": "={{ $('HTTP: Exchange code → tokens').item.json.expires_in }}",
+              "type": "string"
+            },
+            {
+              "id": "7d4c0f8c-7681-4efa-b309-832fd0ad8efa",
+              "name": "user_id",
+              "value": "={{ $json.decoded.sub }}",
+              "type": "string"
+            },
+            {
+              "id": "40b0b6ee-71e3-495c-b5aa-3d410c282101",
+              "name": "email",
+              "value": "={{ $json.decoded.email }}",
+              "type": "string"
+            },
+            {
+              "id": "9db8f314-97a4-4bac-8fd8-1ca4bb13f9a5",
+              "name": "N8N_JWT_SECRET",
+              "value": "={{$env.N8N_JWT_SECRET}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1616,
+        272
+      ],
+      "id": "8d74e43a-2a30-47fd-952c-21b6a133de73",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1d65e525-97b9-4329-8907-31d3cb2b32b9",
+              "leftValue": "={{ $json.state }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        368
+      ],
+      "id": "88ac4e40-b0ef-4d2d-b4b8-162436e3b852",
+      "name": "IF: state exists"
+    },
+    {
+      "parameters": {
+        "jsCode": "function b64url(input) {\n  return Buffer.from(JSON.stringify(input))\n    .toString('base64')\n    .replace(/=/g, '')\n    .replace(/\\+/g, '-')\n    .replace(/\\//g, '_');\n}\n\n// Current timestamp in seconds\nconst now = Math.floor(Date.now() / 1000);\n\nconst sub = $('Edit Fields').first().json.user_id;\nconst email = $('Edit Fields').first().json.email || null;\n\n// JWT header & payload\nconst header = { alg: 'HS256', typ: 'JWT' };\nconst payload = {\n  sub,\n  email,\n  scope: ['chat:read', 'chat:write'],\n  iat: now,\n  exp: now + 600, // 10 min expiry\n};\n\n// base64url encode\nconst h = b64url(header);\nconst p = b64url(payload);\n\nreturn [\n  {\n    json: {\n      header_b64: h,\n      payload_b64: p,\n      signing_input: `${h}.${p}`,\n      sub,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2512,
+        176
+      ],
+      "id": "365da9bc-b105-4147-8d8a-65193510fd22",
+      "name": "Code: Build JWT Header & Payload"
+    },
+    {
+      "parameters": {
+        "action": "hmac",
+        "type": "SHA256",
+        "value": "={{ $json.signing_input }}",
+        "secret": "={{ $('Edit Fields').first().json.N8N_JWT_SECRET }}",
+        "encoding": "base64"
+      },
+      "type": "n8n-nodes-base.crypto",
+      "typeVersion": 1,
+      "position": [
+        2736,
+        176
+      ],
+      "id": "6cee339a-fcac-40a1-8f5e-a2e689b31cda",
+      "name": "Crypto: Sign JWT"
+    },
+    {
+      "parameters": {
+        "jsCode": "const sig = $json.data\n  .replace(/=/g, '')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_');\n\nconst header = $json.header_b64;\nconst payload = $json.payload_b64;\n\nreturn [\n  {\n    json: {\n      userId: $json.sub,\n      jwt: `${header}.${payload}.${sig}`,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        176
+      ],
+      "id": "459a1194-4887-4f51-b578-5138e89bff24",
+      "name": "Code: base64url"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Waitlist",
+        "limit": 300,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{ $json.email }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2064,
+        272
+      ],
+      "id": "aea7f03b-c34a-4e99-b1fc-7ffdf96b873d",
+      "name": "User verification",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "eca3b607-72a4-44ae-8eb9-cf605a892df2",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2288,
+        272
+      ],
+      "id": "3fd3e352-55cb-4745-b03f-168137568947",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "User Doesn't Exist in the List",
+        "options": {
+          "responseCode": 408
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2512,
+        368
+      ],
+      "id": "f542a1e4-703e-4b19-8582-f20e5a70f90e",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {
+    "Webhook: /oauth/callback": [
+      {
+        "json": {
+          "headers": {
+            "host": "connector.saai.dev",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "cookie": "rl_page_init_referrer=RudderEncrypt%3AU2FsdGVkX1%2B5p0EZvCxaemizftKYWV3h9w3V4BtWrhk%3D; rl_page_init_referring_domain=RudderEncrypt%3AU2FsdGVkX1%2BbYvCCyZRs60YwzY48IVCRW%2BWa56U7rno%3D; rl_anonymous_id=RudderEncrypt%3AU2FsdGVkX1%2Bn6TQVVJMiMHQIJYdsAEY%2BtvuOhJkg1wgHeSQzobXKIs1MyGAwnHFVl76vKA8WiT0WMqp%2BD3yeWw%3D%3D; rl_user_id=RudderEncrypt%3AU2FsdGVkX19QVzJJONElo1cI91u9eurS9Joktwd2pG%2FaIpTZdWUPWAV%2B7XBAAXUCuWHGQXXePjzZ4X4Abnn20FEqH2Hs0sZ%2BOxmd5DVrXGQVsiG%2BKcrRom9Ux%2BStw3%2Bc18LQf6i4NflTBdD8MFPVe%2Bz9xP3S50eBilJurCzw37U%3D; rl_trait=RudderEncrypt%3AU2FsdGVkX1%2BSNYXMp5vGm%2BgN1dLQZdc%2BUziXIX8JE2e1BeUI2qq8KN0i3u7dqagGKNK1iDj5XbRg2%2BUwzQQSj%2FIdz8F0OHAQ8Y38yzkc8tpbnWcCoiWKMQzNwrht9tO2AIFp5iUOIpeRlc48z%2BkkwASxB7wxYdYVE6ZV79MYfUs%3D; ph_phc_4URIAm1uYfJO7j8kWSe0J8lc8IqnstRLS7Jx8NcakHo_posthog=%7B%22distinct_id%22%3A%2213d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5%238e352bbe-5994-4b2b-8346-d5ac8f79ac75%22%2C%22%24sesid%22%3A%5B1762453035736%2C%22019a5a61-ccd8-76ee-9c41-dae410829be0%22%2C1762452950230%5D%2C%22%24epp%22%3Atrue%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22%24direct%22%2C%22u%22%3A%22https%3A%2F%2Fconnector.saai.dev%2Fsignin%3Fredirect%3D%25252Fworkflow%25252F6F262nC14sfSLLaE%22%7D%7D; rl_session=RudderEncrypt%3AU2FsdGVkX1%2B5IrSnkKcHtcvv3hRy0SdTlYa9Kkphv4SZKFQMwxIyHQcLEZ8RB3sT2LPo91HydrQcxR2p9%2FBYbfieq2ePONYd8cs5byO%2BwFgP3vfMuVNaPdXMbBeFtGt4D6Q5cmkXWgbDz4z8Q6TOcA%3D%3D",
+            "priority": "u=0, i",
+            "referer": "https://accounts.google.com/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"macOS\"",
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "cross-site",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
+            "x-forwarded-for": "113.30.217.95",
+            "x-forwarded-host": "connector.saai.dev",
+            "x-forwarded-proto": "https",
+            "x-railway-edge": "railway/asia-southeast1-eqsg3a",
+            "x-railway-request-id": "a94PjVw6TbOKXeFRV7rehQ",
+            "x-real-ip": "113.30.217.95",
+            "x-request-start": "1762453076058"
+          },
+          "params": {},
+          "query": {
+            "state": "b847f88ea2b7ca410e33916ce9c97081",
+            "code": "4/0Ab32j91vjBi3JCdHu9cAaIkLci-OhJB-L9lnf7lKgRPZUCVHQxPXkz-q1QnbSlRXwatg7Q",
+            "scope": "email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.labels https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid",
+            "authuser": "0",
+            "prompt": "consent"
+          },
+          "webhookUrl": "https://connector.saai.dev/webhook/oauth/callback",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook: /oauth/callback": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Get oauth_state by state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Get oauth_state by state": {
+      "main": [
+        [
+          {
+            "node": "IF: state exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Mark state used": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Exchange code → tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Upsert user": {
+      "main": [
+        [
+          {
+            "node": "User verification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Exchange code → tokens": {
+      "main": [
+        [
+          {
+            "node": "Code: Decode id_token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Decode id_token": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: state exists": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Mark state used",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond: 400 invalid_state",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Build JWT Header & Payload": {
+      "main": [
+        [
+          {
+            "node": "Crypto: Sign JWT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto: Sign JWT": {
+      "main": [
+        [
+          {
+            "node": "Code: base64url",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: base64url": {
+      "main": [
+        [
+          {
+            "node": "Respond: 302 → extension",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User verification": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code: Build JWT Header & Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "429a5400-6071-4345-89c4-4a5489b8a794",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "ooMyD6okV9WuWM9x",
+  "tags": []
+}

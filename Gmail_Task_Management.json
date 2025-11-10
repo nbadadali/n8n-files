@@ -1,0 +1,1010 @@
+{
+  "name": "Gmail Task Management",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "={{$env.N8N_WEBHOOK_BASE_URL6}}",
+        "authentication": "jwtAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2064,
+        224
+      ],
+      "id": "0acd0f64-f237-4fc9-9c8f-3deb4bf65715",
+      "name": "Webhook",
+      "webhookId": "d5c3a514-9b33-4b12-9263-238cf99c265f",
+      "credentials": {
+        "jwtAuth": {
+          "id": "bJS1bfXc2RaUr7bV",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Webhook').item.json.body.context }}",
+                    "rightValue": "ExtractTasksList",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e68c14e2-4607-45b4-b33a-ced414b2448b"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "11b82cdb-ef3b-4cd7-993d-037c8ce221bf",
+                    "leftValue": "={{ $('Webhook').item.json.body.context }}",
+                    "rightValue": "DeleteTask",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b097ff51-03a9-4b4b-97ce-8ff7cb699685",
+                    "leftValue": "={{ $('Webhook').item.json.body.context }}",
+                    "rightValue": "ManualTaskAddition",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1168,
+        208
+      ],
+      "id": "30b61498-f6cc-458d-a131-84d9c61fde38",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$env.GOOGLE_OAUTH_TOKEN_URL}}",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "client_id",
+              "value": "={{$env.GOOGLE_CLIENT_ID}}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{$env.GOOGLE_CLIENT_SECRET}}"
+            },
+            {
+              "name": "refresh_token",
+              "value": "={{ $json.refresh_token }}"
+            },
+            {
+              "name": "grant_type",
+              "value": "refresh_token"
+            }
+          ]
+        }
+      },
+      "name": "Exchange Refresh Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -1616,
+        224
+      ],
+      "id": "27d5f817-3b07-4948-b172-9285045d4d2e"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "users",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.userId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1840,
+        224
+      ],
+      "id": "1931c6b8-fc5d-4c50-93bf-6baaa4441aa5",
+      "name": "Get User ID",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5f97ae85-7832-4bd5-9145-0f2e1293a85e",
+              "name": "access_token",
+              "value": "={{ $json.access_token }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1392,
+        224
+      ],
+      "id": "1d4b353a-0c5c-41b0-a28d-815c07f066db",
+      "name": "Set Access Token"
+    },
+    {
+      "parameters": {
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than:15d",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n}"
+      },
+      "name": "List Inbox Emails",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        -80
+      ],
+      "id": "63a711c2-6784-4e46-8cca-020adc8656a7"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Task_Processed_Id's",
+        "limit": 1000,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.userId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        -80
+      ],
+      "id": "ff451261-2f4b-4961-bc63-59709ae6a5c3",
+      "name": "Id Compare Supabase",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "Task_Management",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Webhook').item.json.body.userId }}"
+            },
+            {
+              "fieldId": "task",
+              "fieldValue": "={{ $('Webhook').item.json.body.taskName }}"
+            },
+            {
+              "fieldId": "priority",
+              "fieldValue": "={{ $('Webhook').item.json.body.priority }}"
+            },
+            {
+              "fieldId": "tag",
+              "fieldValue": "Manual"
+            },
+            {
+              "fieldId": "sender",
+              "fieldValue": "={{ $('Webhook').item.json.body.from }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        320
+      ],
+      "id": "1bce45f3-013e-4fee-b69d-f7c13c3162a5",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "Task_Management",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "task",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.taskName }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        128
+      ],
+      "id": "ff0dce19-cd64-409e-b021-09ea86302a44",
+      "name": "Delete a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Task Delete Successful",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -720,
+        128
+      ],
+      "id": "34d969e5-efc4-4e44-8d30-c60f0aa15721",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Manual Task Update Successful ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -720,
+        320
+      ],
+      "id": "4b00c4cf-c96e-4126-9423-574e4af4da90",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const gmailMessages = $items(\"List Inbox Emails\")[0].json.messages;\nconst supabaseRows = $items(\"Id Compare Supabase\");\n\n// Build a Set for fast lookup of saved IDs\nconst savedIds = new Set(supabaseRows.map(row => row.json.id));\n\nconsole.log(JSON.stringify(gmailMessages, null, 2));\n\n// Only keep Gmail messages whose id is NOT in Supabase\nconst newMessages = gmailMessages.filter(msg => !savedIds.has(msg.id));\n\n// If no new messages → return [] (not [{}])\nif (!newMessages.length) {\n  return [];\n}\n\n// Otherwise, return items\nreturn newMessages.map(msg => ({ json: msg }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        -80
+      ],
+      "id": "03acf842-aa4f-453a-94e5-c86fc90a6856",
+      "name": "Code",
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}?format=full",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Set Access Token').first().json.access_token }}\"\n}"
+      },
+      "name": "Get Message Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        -272
+      ],
+      "id": "5788d86c-8a93-467e-8ba2-df017723d54b"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Extract tasks from the following email data: {{ $json.merged_text }}"
+            },
+            {
+              "content": "You are a **Sa.AI** assistant that extracts actionable tasks from email threads.  \n\n### Rules:\n- The input contains one or more emails inside \"THREAD START\" and \"THREAD END\" markers.  \n- Treat each thread separately and generate one task per thread. \n- For each task, use the **sender email** from the \"From:\" field of the SAME thread.  \n- Do not assume all tasks come from the first sender.  \n- Identify actionable tasks only (ignore greetings, signatures, disclaimers). \n- Ignore promotional emails totally \n- If multiple tasks are in one email, output them as separate JSON objects.  \n\n### Output Format (JSON only):\nYou must always return the output in the following format:\n{\n  \"tasks\": [\n    {\n      \"task\": \"details about the task and due date(if applicable)\",\n      \"priority\": \"high | medium | low | unknown\",\n      \"sender\": \"email address\"\n    }\n  ]\n}\n\nNever use \"result\" or \"results\" as the key. Always use \"tasks\".\n\n### Priority Rules:\n- \"high\" → urgent (today, tomorrow, or ≤ 3 days, submission, investor, bank, meeting).  \n- \"medium\" → due within a week.  \n- \"low\" → due later or no strict timeline.  \n  \n\n### Example:\nInput:\n----- THREAD START -----\nFrom: manager@example.com\nBody: Please review the design today and also schedule next week’s team sync.\n----- THREAD END -----\n\nOutput:\n[\n  {\n    \"task\": \"Review the design today\",\n    \"priority\": \"high\",\n    \"sender\": \"manager@example.com\"\n  },\n  {\n    \"task\": \"Schedule next week’s team sync\",\n    \"priority\": \"medium\",\n    \"sender\": \"manager@example.com\"\n  }\n]\n\n\n",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1040,
+        -288
+      ],
+      "id": "34a56841-666f-4816-8a3e-c798917435db",
+      "name": "Message a model1",
+      "notesInFlow": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ================== Sa.AI Inbox Function (compressed, single output) ==================\n\n// ---------- Tunables ----------\nconst MAX_MSGS_PER_THREAD = 4;      // total messages to keep in transcript\nconst MAX_BODY_CHARS = 600;         // per-message body cap\nconst INCLUDE_FULL_TRANSCRIPT = false; // keep compact only to reduce size\n\n// ---------- Helpers ----------\nconst MS_PER_DAY = 24 * 60 * 60 * 1000;\n\nconst cleanText = (s = \"\") =>\n  String(s)\n    .replace(/\\r/g, \"\\n\")\n    .replace(/[ \\t]+\\n/g, \"\\n\")\n    .replace(/\\n{3,}/g, \"\\n\\n\")\n    .trim();\n\nconst norm = (s) => String(s || \"\").toLowerCase().trim();\n\nfunction parseTs(dateStr) {\n  if (!dateStr) return null;\n  const d = new Date(dateStr);\n  return Number.isFinite(d.getTime()) ? d : null;\n}\n\nfunction daysOldFrom(dateStr) {\n  const d = parseTs(dateStr);\n  if (!d) return null;\n  const now = new Date();\n  const diff = now.getTime() - d.getTime();\n  return diff < 0 ? 0 : Math.floor(diff / MS_PER_DAY);\n}\n\nfunction dubaiDisplayDate(dateStr) {\n  const d = parseTs(dateStr);\n  if (!d) return \"\";\n  return d.toLocaleDateString(\"en-GB\", {\n    day: \"2-digit\", month: \"short\", year: \"numeric\",\n    timeZone: \"Asia/Dubai\"\n  });\n}\n\n// Keep only the new text (remove quoted tails)\nfunction stripQuotedTail(body = \"\") {\n  if (!body) return \"\";\n  const b = cleanText(body);\n  const markers = [\n    /^On .+ wrote:\\s*$/mi,\n    /^-{2,}\\s*Original Message\\s*-{2,}\\s*$/mi,\n    /^From:\\s.*$/mi,\n  ];\n  let cut = b.length;\n  for (const re of markers) {\n    const m = b.match(re);\n    if (m && m.index < cut) cut = m.index;\n  }\n  let head = b.slice(0, cut);\n  head = head.split(\"\\n\").filter(line => !/^\\s*>/.test(line)).join(\"\\n\");\n  return cleanText(head);\n}\n\nfunction trimBody(b, max = MAX_BODY_CHARS) {\n  const s = cleanText(b || \"\");\n  return s.length > max ? s.slice(0, max) + \" …\" : s;\n}\n\nconst hasLabel = (m, name) =>\n  Array.isArray(m.labelIds) && m.labelIds.includes(name);\n\n// ---------- Robust Input Normalization ----------\nconst collectRawMessages = (items) => {\n  const out = [];\n  for (const it of items) {\n    const j = it?.json ?? it;\n\n    // If looks like our own output (avoid loops)\n    if (j && j.merged_text && Array.isArray(j.threads)) {\n      continue;\n    }\n    if (Array.isArray(j)) {\n      for (const m of j) {\n        if (m && (m.subject || m.Subject || m.body_decoded || m.snippet)) out.push(m);\n      }\n      continue;\n    }\n    if (j && Array.isArray(j.threads)) {\n      const looksLikeMessage = (m) =>\n        !!(m && (m.subject || m.Subject) && (m.sender_email || m.From) && (m.receiver_email || m.To));\n      if (j.threads.every(looksLikeMessage)) {\n        out.push(...j.threads);\n        continue;\n      }\n      continue; // thread objects => skip\n    }\n    if (j && (j.subject || j.Subject || j.body_decoded || j.snippet)) out.push(j);\n  }\n  return out;\n};\n\nconst raw = collectRawMessages(items);\n\n// ---------- Mailbox detection ----------\nconst toCounts = {};\nfor (const e of raw) {\n  const to = norm(e.receiver_email || e.To);\n  if (to) toCounts[to] = (toCounts[to] || 0) + 1;\n}\nlet userMailbox = Object.entries(toCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || \"\";\nif (!userMailbox && items?.[0]?.json?.user_mailbox) {\n  userMailbox = norm(items[0].json.user_mailbox);\n}\n\n// ---------- Direction checks (mutually exclusive) ----------\nconst isInbox = (m) => {\n  const recv = norm(m.receiver_email || m.To);\n  if (recv && recv === userMailbox) return true;\n  return hasLabel(m, \"INBOX\");\n};\nconst isSent = (m) => {\n  const snd = norm(m.sender_email || m.From);\n  if (snd && snd === userMailbox) return true;\n  return hasLabel(m, \"SENT\");\n};\n\n// ---------- Thread bucketing ----------\nfunction normalizeSubject(sub = \"\") {\n  return String(sub).toLowerCase().replace(/^\\s*(re:|fwd:)\\s*/gi, \"\").replace(/\\s+/g, \" \").trim();\n}\n\nconst buckets = new Map();\nfor (const e of raw) {\n  const key = e.thread_id || e.threadId\n    ? `tid:${e.thread_id || e.threadId}`\n    : `subj:${normalizeSubject(e.subject || e.Subject || \"\")}::${norm(e.sender_email || e.From)}`;\n  if (!buckets.has(key)) buckets.set(key, []);\n  buckets.get(key).push(e);\n}\n\n// ---------- Classifier configs ----------\nconst VIP_SENDERS = new Set([\n  // \"ceo@company.com\"\n]);\nconst RE_URGENT  = /\\b(urgent|outage|escalation|sev[-\\s]*[12]|critical|legal|final notice)\\b/i;\nconst RE_INVOICE = /\\b(invoice|payment|overdue|fedwire|wire|remit|past due)\\b/i;\nconst RE_CLOSURE = /\\b(received|resolved|fixed|delivered|issue closed|payment received|thanks for resolving)\\b/i;\nconst RE_REF     = /\\b(FEDWIRE#\\s*[\\w-]+|INV[-\\s]*\\d{3,}|[A-Z]{2,}\\d{3,})\\b/;\n\n// ---------- Build outputs ----------\nconst blocks = [];\nconst threads = [];\nconst refIndex = new Map(); // refId -> { paid, overdue, thread_keys: Set() }\n\nfor (const [key, msgsAll] of buckets.entries()) {\n  // De-dup messages\n  const seenMsg = new Set();\n  const msgs = [];\n  for (const m of msgsAll) {\n    const mid = m.message_id || m.messageId || `${m.date || m.Date}::${m.subject||m.Subject}::${m.sender_email||m.From}`;\n    if (!seenMsg.has(mid)) {\n      seenMsg.add(mid);\n      msgs.push(m);\n    }\n  }\n\n  // Sort oldest→newest\n  msgs.sort((a,b) => {\n    const ta = parseTs(a.date || a.Date)?.getTime() || 0;\n    const tb = parseTs(b.date || b.Date)?.getTime() || 0;\n    return ta - tb;\n  });\n\n  // Must have at least one INBOX message\n  const inboxMsgs = msgs.filter(isInbox);\n  if (!inboxMsgs.length) continue;\n\n  // Latest inbox for header\n  const latestInbox = inboxMsgs[inboxMsgs.length - 1];\n  const subject     = latestInbox.subject || latestInbox.Subject || \"\";\n  const from        = latestInbox.sender_email || latestInbox.From || \"\";\n  const to          = latestInbox.receiver_email || latestInbox.To || \"\";\n  const dateStr     = latestInbox.date || latestInbox.Date || \"\";\n  const daysOld     = daysOldFrom(dateStr);\n  const dateDisplay = dubaiDisplayDate(dateStr);\n\n  // Already replied? any SENT after latest inbox\n  const latestInboxTs = parseTs(dateStr)?.getTime() || 0;\n  const laterSent = msgs.some(m => isSent(m) && (parseTs(m.date || m.Date)?.getTime() || 0) > latestInboxTs);\n  const alreadyReplied = !!laterSent;\n\n  // --------- COMPRESSION LOGIC ----------\n  // 1) Build minimal set of message indices to include:\n  //    - first INBOX (context) if exists\n  //    - latest INBOX (the \"ask\")\n  //    - any SENT messages after latest INBOX (your responses)\n  const idxFirstInbox = msgs.findIndex(isInbox);\n  const idxLatestInbox = msgs.lastIndexOf(latestInbox);\n  const includeIdx = new Set();\n\n  if (idxFirstInbox >= 0) includeIdx.add(idxFirstInbox);\n  includeIdx.add(idxLatestInbox);\n\n  msgs.forEach((m, idx) => {\n    if (isSent(m)) {\n      const t = parseTs(m.date || m.Date)?.getTime() || 0;\n      if (t > latestInboxTs) includeIdx.add(idx);\n    }\n  });\n\n  // 2) If we still have room, backfill one earlier message before latest inbox (context), then one after (if any)\n  if (includeIdx.size < MAX_MSGS_PER_THREAD) {\n    for (let i = idxLatestInbox - 1; i >= 0 && includeIdx.size < MAX_MSGS_PER_THREAD; i--) {\n      includeIdx.add(i);\n    }\n  }\n  if (includeIdx.size < MAX_MSGS_PER_THREAD) {\n    for (let i = idxLatestInbox + 1; i < msgs.length && includeIdx.size < MAX_MSGS_PER_THREAD; i++) {\n      includeIdx.add(i);\n    }\n  }\n\n  // 3) Build compact transcript in chronological order with body trimming and duplicate-body collapse\n  const keepIdx = Array.from(includeIdx).sort((a,b)=>a-b);\n  const bodySeen = new Set();\n  const lines = [];\n  lines.push(\"----- THREAD START -----\");\n  keepIdx.forEach((idx, i) => {\n    const m = msgs[idx];\n    const dir = isSent(m) ? \"SENT\" : (isInbox(m) ? \"INBOX\" : \"OTHER\");\n    const mSubj = m.subject || m.Subject || \"\";\n    const mFrom = m.sender_email || m.From || \"\";\n    const mTo   = m.receiver_email || m.To || \"\";\n    const mDate = m.date || m.Date || \"\";\n    const mDays = daysOldFrom(mDate);\n    const mDateDisp = dubaiDisplayDate(mDate);\n    const rawBody = m.body_decoded || m.snippet || \"\";\n    const topBody = trimBody(stripQuotedTail(rawBody));\n    const bodyKey = norm(topBody).slice(0, 64); // small hash-ish\n\n    if (!topBody || bodySeen.has(bodyKey)) {\n      // Skip empty or duplicate content blocks\n      lines.push(`### Message ${i + 1} — ${dir}`);\n      lines.push(`Subject: ${mSubj}`);\n      lines.push(`From: ${mFrom}`);\n      lines.push(`To: ${mTo}`);\n      lines.push(`Date: ${mDateDisp}${mDays != null ? ` (${mDays} days old)` : \"\"}`);\n      lines.push(`Body:\\n`);\n    } else {\n      bodySeen.add(bodyKey);\n      lines.push(`### Message ${i + 1} — ${dir}`);\n      lines.push(`Subject: ${mSubj}`);\n      lines.push(`From: ${mFrom}`);\n      lines.push(`To: ${mTo}`);\n      lines.push(`Date: ${mDateDisp}${mDays != null ? ` (${mDays} days old)` : \"\"}`);\n      lines.push(`Body:\\n${topBody}`);\n    }\n  });\n  lines.push(\"----- THREAD END -----\");\n  const compactTranscript = lines.join(\"\\n\");\n\n  // Signals for pre-classifier\n  const subjBody = `${subject}\\n${compactTranscript}`;\n  const senderEmail = norm(from);\n  const refMatch = subjBody.match(RE_REF);\n  const refId = refMatch ? refMatch[1].replace(/\\s+/g, \"\") : \"\";\n\n  const signals = {\n    is_unread: hasLabel(latestInbox, \"UNREAD\") ? true : false, // keep simple/strict\n    is_vip: VIP_SENDERS.has(senderEmail),\n    has_urgent_terms: RE_URGENT.test(subjBody),\n    has_invoice_terms: RE_INVOICE.test(subjBody),\n    closure_cue: (subjBody.match(RE_CLOSURE)?.[0] || \"\"),\n    ref_id: refId,\n  };\n\n  // Proposed deterministic category\n  let proposed = \"low_priority\";\n  if (alreadyReplied && signals.closure_cue) {\n    proposed = \"already_replied\";\n  } else if (signals.has_urgent_terms || signals.is_vip) {\n    proposed = \"high_priority\";\n  } else if (signals.has_invoice_terms && !signals.closure_cue) {\n    proposed = \"high_priority\";\n  } else if (signals.is_unread && Number.isFinite(daysOld) && daysOld >= 3) {\n    proposed = \"missed_or_ignored\";\n  } else if (/\\b(please (confirm|approve|share|schedule)|can you|kindly|need your|action required)\\b/i.test(subjBody)) {\n    proposed = \"medium_priority\";\n  }\n\n  // Human-readable block (compact)\n  const header = [\n    `Subject - ${subject}`,\n    `From: ${from}`,\n    `to - ${to}`,\n    `Date: ${dateDisplay}${daysOld != null ? ` (${daysOld} days old)` : \"\"}`,\n    `already replied - ${alreadyReplied ? \"true\" : \"false\"}`,\n    `Body:\\n${compactTranscript}`\n  ].join(\"\\n\");\n  blocks.push(header);\n\n  // Thread object\n  const labelsArr = Array.isArray(latestInbox.labelIds) ? latestInbox.labelIds : [];\n  const threadObj = {\n    thread_key: key,\n    thread_size: msgs.length,\n    subject,\n    from,\n    to,\n    date: dateStr,\n    date_display: dateDisplay,\n    days_old: daysOld ?? 0,\n    labels: labelsArr,\n    already_replied: alreadyReplied,\n    closure_cue: signals.closure_cue || null,\n    full_transcript: INCLUDE_FULL_TRANSCRIPT ? compactTranscript : undefined,\n    signals,\n    proposed_category: proposed\n  };\n  threads.push(threadObj);\n\n  // Build refIndex for conflicts\n  if (signals.ref_id) {\n    const bucket = refIndex.get(signals.ref_id) || { paid: false, overdue: false, thread_keys: new Set() };\n    if (/\\b(payment received|paid|remitted)\\b/i.test(subjBody)) bucket.paid = true;\n    if (/\\b(final notice|overdue|past due)\\b/i.test(subjBody)) bucket.overdue = true;\n    bucket.thread_keys.add(key);\n    refIndex.set(signals.ref_id, bucket);\n  }\n}\n\n// ---------- Cross-thread conflict resolution ----------\nfor (const [refId, info] of refIndex.entries()) {\n  if (info.paid && info.overdue) {\n    for (const th of threads) {\n      if (th.signals.ref_id === refId) {\n        if (th.proposed_category === \"high_priority\" &&\n            /\\b(overdue|final notice|past due)\\b/i.test(th.signals.ref_id + \" \" + th.subject)) {\n          th.proposed_category = \"medium_priority\";\n        }\n      }\n    }\n  }\n}\n\n// ---------- Final single output ----------\nconst merged_text = blocks.join(\"\\n\\n====\\n\\n\");\n\nreturn [\n  {\n    json: {\n      merged_text\n    }\n  }\n];\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -288
+      ],
+      "id": "522503e7-9823-4af3-90e0-b29d16eb2c04",
+      "name": "Code6"
+    },
+    {
+      "parameters": {
+        "jsCode": "function decodeQuotedPrintable(str) {\n  if (!str) return \"\";\n  // Replace =XX (hex) with corresponding character\n  return str\n    .replace(/=\\r?\\n/g, \"\") // remove soft line breaks\n    .replace(/=([A-Fa-f0-9]{2})/g, (match, hex) => {\n      return String.fromCharCode(parseInt(hex, 16));\n    });\n}\n\nfunction decodeEmailData(str, contentTransferEncoding) {\n  if (!str) return null;\n\n  // Gmail URL-safe Base64 → standard\n  str = str.replace(/-/g, '+').replace(/_/g, '/');\n  let decoded = Buffer.from(str, 'base64').toString('utf-8');\n\n  // Handle quoted-printable if needed\n  if (contentTransferEncoding && contentTransferEncoding.toLowerCase() === 'quoted-printable') {\n    decoded = decodeQuotedPrintable(decoded);\n  }\n\n  return decoded;\n}\n\nfunction getEmailBody(payload) {\n  if (!payload) return null;\n\n  if (payload.body?.data) {\n    const encoding = payload.headers?.find(h => h.name.toLowerCase() === 'content-transfer-encoding')?.value;\n    return decodeEmailData(payload.body.data, encoding);\n  }\n\n  if (Array.isArray(payload.parts)) {\n    for (const part of payload.parts) {\n      if (part.mimeType === \"text/plain\" && part.body?.data) {\n        const encoding = part.headers?.find(h => h.name.toLowerCase() === 'content-transfer-encoding')?.value;\n        return decodeEmailData(part.body.data, encoding);\n      }\n    }\n    for (const part of payload.parts) {\n      const nested = getEmailBody(part);\n      if (nested) return nested;\n    }\n  }\n\n  return null;\n}\n\nfunction getHeaderValue(payload, name) {\n  const header = (payload.headers || []).find(h => h.name.toLowerCase() === name.toLowerCase());\n  return header ? header.value : null;\n}\n\nfunction getSenderEmail(payload) {\n  const from = getHeaderValue(payload, 'from');\n  if (!from) return null;\n  const match = from.match(/<?([\\w\\.-]+@[\\w\\.-]+\\.\\w+)>?/);\n  return match ? match[1] : null;\n}\n\nfunction getToEmail(payload) {\n  const to = getHeaderValue(payload, 'to');\n  if (!to) return null;\n  const match = to.match(/<?([\\w\\.-]+@[\\w\\.-]+\\.\\w+)>?/);\n  return match ? match[1] : null;\n}\n\nfunction getSubject(payload) { return getHeaderValue(payload, 'subject'); }\nfunction getDate(payload) { return getHeaderValue(payload, 'date'); }\n\n// 1. Auto-detect user's email from any INBOX message's \"To\" header\nlet userEmail = null;\nfor (const item of items) {\n  if ((item.json.labelIds || []).includes(\"INBOX\")) {\n    const to = getToEmail(item.json.payload || {});\n    if (to) {\n      userEmail = to.toLowerCase();\n      break;\n    }\n  }\n}\n\n// 2. Process emails\nreturn items\n  .filter(item => {\n    const labels = item.json.labelIds || [];\n    return labels.includes(\"INBOX\") || labels.includes(\"SENT\");\n  })\n  .map(item => {\n    const payload = item.json.payload || {};\n    const labels = item.json.labelIds || [];\n    const receiver_email = labels.includes(\"SENT\") ? getToEmail(payload) : userEmail;\n\n    return {\n      json: {\n        id: item.json.id,\n        thread_id: item.json.threadId,\n        labelIds: labels,\n        body_decoded: getEmailBody(payload),\n        sender_email: getSenderEmail(payload),\n        receiver_email: receiver_email,\n        subject: getSubject(payload),\n        date: getDate(payload)\n      }\n    };\n  });\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        -288
+      ],
+      "id": "c42168f7-3c6c-430f-b838-eb132f55a24f",
+      "name": "Code - decode base64"
+    },
+    {
+      "parameters": {
+        "tableId": "Task_Management",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Webhook').first().json.body.userId }}"
+            },
+            {
+              "fieldId": "task",
+              "fieldValue": "={{ $json.task }}"
+            },
+            {
+              "fieldId": "priority",
+              "fieldValue": "={{ $json.priority }}"
+            },
+            {
+              "fieldId": "sender",
+              "fieldValue": "={{ $json.sender }}"
+            },
+            {
+              "fieldId": "tag",
+              "fieldValue": "Automatic"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        -288
+      ],
+      "id": "659094d7-1a0e-487c-be48-0227f7d46306",
+      "name": "Create a row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle array wrapper - get first item if input is an array\nlet data = Array.isArray($json) ? $json[0] : $json;\n\n// Determine the structure and access content\nlet content;\nif (data.choices) {\n  // Structure 1: Has 'choices' array (OpenAI chat completion format)\n  content = data.choices[0]?.message?.content || {};\n} else if (data.message) {\n  // Structure 2: Direct message format\n  content = data.message?.content || {};\n} else {\n  content = {};\n}\n\n// Pick whichever key exists: tasks, result, or results\nlet raw = content.tasks \n        || content.result \n        || content.results \n        || [];\n\n// Flatten if nested\nlet tasks = [];\nif (Array.isArray(raw) && raw.length > 0) {\n  if (Array.isArray(raw[0])) {\n    tasks = raw.flat();\n  } else {\n    tasks = raw;\n  }\n} else if (raw.task) {\n  tasks = [raw];\n}\n\n// Return one item per task, or empty item if no tasks\nif (tasks.length === 0) {\n  return [{ json: {} }];\n}\n\nreturn tasks.map(t => ({\n  json: {\n    task: t.task || '',\n    priority: t.priority || '',\n    sender: t.sender || ''\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        -288
+      ],
+      "id": "30de14db-9b59-447e-87ca-47e05671f68b",
+      "name": "Code1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "tableId": "Task_Processed_Id's",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Webhook').first().json.body.userId }}"
+            },
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        -464
+      ],
+      "id": "cc1fe1ff-ca56-4a9e-9a06-d722751edd40",
+      "name": "Create a row2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "Task_Management",
+        "limit": 1000,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').first().json.body.userId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        800,
+        128
+      ],
+      "id": "63c64711-74e0-4816-932a-e0d59fed51c9",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1248,
+        128
+      ],
+      "id": "61e4f370-041b-4a36-a5a3-c2d7f5d95b5b",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "39f004cb-c330-4c42-97e1-38df0606b05f",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -288,
+        -256
+      ],
+      "id": "85ad731c-9816-4548-adca-4dcc65ee9ac2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "// For each input item, return only task, priority, and sender fields\nreturn items.map(item => ({\n  json: {\n    task: item.json.task,\n    priority: item.json.priority,\n    sender: item.json.sender\n  }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        128
+      ],
+      "id": "8a907a22-dd60-4139-beaa-fc0f71066274",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const requiredLabels = [\"INBOX\", \"CATEGORY_PERSONAL\"];\nreturn $input.all().filter(item => {\n  const labels = item.json.labelIds || [];\n  return requiredLabels.every(label => labels.includes(label));\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -272
+      ],
+      "id": "8042e593-a75e-4d27-bbe9-a4e5d54f8146",
+      "name": "Code in JavaScript",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f331f8a1-346a-471a-9fcd-0bc62a8cd55e",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        -272
+      ],
+      "id": "238d9b07-b8ff-4465-b2aa-4377790ac795",
+      "name": "If1"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "connector.saai.dev",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+            "content-length": "185",
+            "accept": "application/json",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDEyNjMzMTEyODI0NjE2NDA2MzEiLCJlbWFpbCI6Im5pc2hhbnRiYWRhZGFsaTdAZ21haWwuY29tIiwic2NvcGUiOlsiY2hhdDpyZWFkIiwiY2hhdDp3cml0ZSJdLCJpYXQiOjE3NjIxODQxMDYsImV4cCI6MTc2MjE4NDcwNn0.9KM3uKLkesV-fZ7pcoYjZr0RJllJak_RSpkqM5Y8A0U",
+            "content-type": "application/json",
+            "origin": "chrome-extension://bbagojggplecbdlgpbadlmhommmnigah",
+            "priority": "u=1, i",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "none",
+            "sec-fetch-storage-access": "active",
+            "x-forwarded-for": "94.57.131.46",
+            "x-forwarded-host": "connector.saai.dev",
+            "x-forwarded-proto": "https",
+            "x-railway-edge": "railway/asia-southeast1-eqsg3a",
+            "x-railway-request-id": "YiU2N_UJQIGv6o8TAQeqjw",
+            "x-real-ip": "94.57.131.46",
+            "x-request-start": "1762184265320"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "userId": "101263311282461640631",
+            "from": "dxbdev4@gmail.com",
+            "context": "ManualTaskAddition",
+            "taskName": "Reschedule the client meeting as the scheduled day has passed",
+            "priority": "high"
+          },
+          "webhookUrl": "https://connector.saai.dev/webhook/Task-Management",
+          "executionMode": "production",
+          "jwtPayload": {
+            "sub": "101263311282461640631",
+            "email": "nishantbadadali7@gmail.com",
+            "scope": [
+              "chat:read",
+              "chat:write"
+            ],
+            "iat": 1762184106,
+            "exp": 1762184706
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get User ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "List Inbox Emails",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete a row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exchange Refresh Token": {
+      "main": [
+        [
+          {
+            "node": "Set Access Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User ID": {
+      "main": [
+        [
+          {
+            "node": "Exchange Refresh Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Access Token": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Inbox Emails": {
+      "main": [
+        [
+          {
+            "node": "Id Compare Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a row": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Id Compare Supabase": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Message Details": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code6": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - decode base64": {
+      "main": [
+        [
+          {
+            "node": "Code6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row1": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Message Details",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create a row2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row2": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Code - decode base64",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a20a69f2-452a-4beb-9a96-b2a2a1baedb7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "SDqAin64UP6uGEJ8",
+  "tags": []
+}

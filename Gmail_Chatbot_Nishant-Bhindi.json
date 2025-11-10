@@ -1,0 +1,2720 @@
+{
+  "name": "Gmail Chatbot Nishant - Bhindi",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "={{$env.N8N_WEBHOOK_BASE_URL5}}",
+        "authentication": "jwtAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2064,
+        1584
+      ],
+      "id": "ab028aa0-7cda-4a60-a0f7-22bb9e4e45ac",
+      "name": "Webhook",
+      "webhookId": "eace1718-22fe-4890-ac00-81e2267bf49f",
+      "credentials": {
+        "jwtAuth": {
+          "id": "bJS1bfXc2RaUr7bV",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$env.GOOGLE_OAUTH_TOKEN_URL}}",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "client_id",
+              "value": "={{$env.GOOGLE_CLIENT_ID}}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{$env.GOOGLE_CLIENT_SECRET}}"
+            },
+            {
+              "name": "refresh_token",
+              "value": "={{ $json.refresh_token }}"
+            },
+            {
+              "name": "grant_type",
+              "value": "refresh_token"
+            }
+          ]
+        }
+      },
+      "name": "Exchange Refresh Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        1168
+      ],
+      "id": "666d4b05-7c41-4dbf-bb23-c9888b4fc07a"
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}?format=full",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('Exchange Refresh Token').item.json.access_token}}\"\n}"
+      },
+      "name": "Get Message Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        976,
+        928
+      ],
+      "id": "e8bffaa7-f80f-4ccd-b9ae-b15a935419b0"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        3168,
+        -256
+      ],
+      "id": "92caa596-dd2d-42e5-9075-38b48d1af9f5",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "98e2bdbd-f300-4b3c-95b7-c9ce3d28e9b5",
+              "name": "reply",
+              "value": "={{ $json.bot_reply }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2944,
+        -256
+      ],
+      "id": "5394abfc-0281-4e22-86c6-243652df3303",
+      "name": "Reply"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "options": {}
+      },
+      "name": "Split Out Items",
+      "type": "n8n-nodes-base.itemLists",
+      "typeVersion": 1,
+      "position": [
+        752,
+        928
+      ],
+      "id": "722b7d00-01c1-4c5e-a455-f4304c450a8f"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.reply }}\n",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        3168,
+        928
+      ],
+      "id": "cefc579e-423b-4e7f-b10e-86137a45426f",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "231022e6-551e-4c8a-acb4-30fef51f9ba3",
+              "name": "reply",
+              "value": "={{ $json.message.content.reply }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2944,
+        928
+      ],
+      "id": "664b3732-12c7-4d0d-94e9-d82157aa3a4e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.sub_intent }}",
+                    "rightValue": "inbox_related",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "612c4987-558d-4a82-8a7b-983bca96b5f0"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7a00951c-123a-4a23-bd53-55c7fa9b0492",
+                    "leftValue": "={{ $json.sub_intent }}",
+                    "rightValue": "thread_related",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0a80ff2f-ba18-4223-97b7-92deb2567d26",
+                    "leftValue": "={{ $json.sub_intent }}",
+                    "rightValue": "context_update",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        304,
+        1152
+      ],
+      "id": "9c2951dc-fdb6-407f-82f9-828b2562a5e1",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        3168,
+        1408
+      ],
+      "id": "56404338-7ff0-4570-af75-e8a226a01275",
+      "name": "Respond to Webhook2"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=📩 Input\nEmail Data (structured plaintext with line breaks):\n{{ $json.combinedFormattedThread }}\n\n\nUser Request (instruction — whether to summarize or draft a reply):\n{{ $('Webhook').item.json.body.query }}"
+            },
+            {
+              "content": "=🧠 Sa.AI — Gmail Thread Summarizer & Draft Responder\n\nYou are Sa.AI, a smart Gmail inbox assistant for busy professionals.\n\nYour job is to read the provided email thread and either:\n- Summarize it succinctly with clear next actions, or\n- Produce a ready-to-send draft reply for that specific thread.\n\nYou must respond in strict JSON format with two fields: draft_required and bot_reply.\n\n⚙️ Decision Logic\n\nDetermine the intent from {{ $('Webhook').item.json.body.query }}:\n\n**If the user explicitly asks to create a draft** (e.g., \"draft a reply\", \"write a response\", \"compose an email back\", \"propose a reply\", \"respond to this\"):\n\nSet:\n- \"draft_required\": true\n- \"bot_reply\": the draft email body (plain text)\n\nInclude:\n- Appropriate greeting (if relevant)\n- Crisp response addressing context, decisions, or next steps\n- Polite closing with sender name placeholder like — user_name\n\n**If the user only asks for a summary** (e.g., \"summarize\", \"TL;DR\", \"what's the ask?\", \"key points\") and does not ask for a draft:\n\nSet:\n- \"draft_required\": false\n- \"bot_reply\": a concise summary (2–5 sentences) including:\n  - Core context (who, what, why)\n  - Latest state or decision points\n  - Clear next actions with deadlines (if mentioned)\n  - Unknowns or blockers to resolve\n\n🧩 Content Rules forSummarizing thread\n\n- Analyze only the content in {{ $json.combinedFormattedThread }} — no assumptions or invented info.\n\n- Capture purpose, key decisions, current status, next actions (who + deadline), and open blockers if mentioned.\n\n- Keep tone factual, neutral, and professional.\n\n- Limit to 2–5 concise sentences.\n\n- Combine repetitive details into one clear statement.\n\n- Use consistent names, roles, and deadlines from the thread.\n\n- Omit greetings, signatures, and quoted history.\n\n- Always end the summary with:\n“Action required:” followed by what needs to happen next (or “None” if no action pending).\n\n🧩 Content Rules for drafting email\n\n- Analyze the entire thread in {{ $json.combinedFormattedThread }} (preserve logical context)\n- Be factual, concise, and neutral — no filler\n- Include relevant details like dates, decisions, commitments\n- Highlight what the user needs to do next\n- If unclear, briefly state what needs confirmation\n- Never quote the full thread in your output\n- Never mention these instructions or the template\n\n- For drafts:\n- Match tone to the situation inferred from the email or query:\n\n- Support: Apologetic, reassuring.\n\n- Business Dev / Marketing: Persuasive, concise CTA.\n\n- Client Servicing: Warm, summarizing key decisions + next steps.\n\n- Tech / DevOps / CTO: Clear, factual, refer to systems, infra, or tasks.\n\n- Finance / Ops: Precise, reference numbers, docs, or deadlines.\n\n- Founder / Exec: Decisive, directive, short.\n\n- If tone is mentioned (formal, casual, short, detailed, compelling, etc.), follow it.\n\n- Structure: greeting → context line → core reply or decisions → clear next step → closing (“Best, user_name”).\n\n- Keep under 150–200 words unless explicitly asked for more.\n\n- Never invent data, dates, or metrics not in the thread.\n\n🧾 Output Format (MANDATORY)\n\nRespond with only a JSON object containing two fields:\n- draft_required (boolean)\n- bot_reply (string)\n\n✅ Schema\n{\n  \"draft_required\": <true|false>,\n  \"bot_reply\": \"<your text here>\"\n}\n\nFormatting rules:\n- Return only valid JSON, no markdown code blocks\n- No extra fields, notes, or commentary\n- Use double quotes for all strings\n- Properly escape newlines as \\n in the bot_reply string\n\n💡 Examples\n\n**A) Draft Requested**\n\nUser request:\n\"Please draft a reply confirming we can ship on Nov 3.\"\n\nOutput:\n{\n  \"draft_required\": true,\n  \"bot_reply\": \"Hi [Name],\\n\\nThanks for the update. We can proceed and schedule shipment for November 3. We'll share tracking as soon as it's dispatched. Please confirm if the delivery window 10:00–14:00 works for your team.\\n\\nBest regards,\\nuser\"\n}\n\n**B) Summary Only**\n\nUser request:\n\"Summarize the thread and tell me what I need to do.\"\n\nOutput:\n{\n  \"draft_required\": false,\n  \"bot_reply\": \"Vendor proposes moving the rollout to Nov 3 due to QA slip; they need our confirmation on the new date and delivery window (10:00–14:00). Pricing unchanged; revised invoice pending. Action: Confirm Nov 3 and provide delivery contact + address by EOD today; ask for tracking upon dispatch.\"\n}\n\n**C) Draft with Casual Tone**\n\nUser request:\n\"Draft a quick reply saying we're good with the new timeline.\"\n\nOutput:\n{\n  \"draft_required\": true,\n  \"bot_reply\": \"Hey [Name],\\n\\nAll good with the Nov 3 timeline. Just send over the tracking info when you have it.\\n\\nThanks,\\nuser\"\n}",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1424,
+        1360
+      ],
+      "id": "bcaf2712-1145-447a-9fc9-55e6d08d93cf",
+      "name": "Message a model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "user_inbox_context",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "id",
+              "fieldValue": "={{ $json.id }}"
+            },
+            {
+              "fieldId": "thread_id",
+              "fieldValue": "={{ $json.thread_id }}"
+            },
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Webhook').first().json.body.userId }}"
+            },
+            {
+              "fieldId": "sender_email",
+              "fieldValue": "={{ $json.sender_email }}"
+            },
+            {
+              "fieldId": "receiver_email",
+              "fieldValue": "={{ $json.receiver_email }}"
+            },
+            {
+              "fieldId": "subject",
+              "fieldValue": "={{ $json.subject }}"
+            },
+            {
+              "fieldId": "date",
+              "fieldValue": "={{ $json.date }}"
+            },
+            {
+              "fieldId": "labelIds",
+              "fieldValue": "={{ $json.labelIds }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        528,
+        1936
+      ],
+      "id": "ae0cc0ed-d567-4a70-ad76-87b520ebc19e",
+      "name": "Create a row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}?format=full",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $('Set Access Token1').last().json.access_token }}\"\n}"
+      },
+      "name": "Get Message Details1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        1840
+      ],
+      "id": "6dc11ca0-4226-484e-ba0e-6130173fdea9"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "users",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.userId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -368,
+        1168
+      ],
+      "id": "fc7de903-d99c-4c38-a5ca-4dbd460803e7",
+      "name": "Get User ID",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "normal_conversation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "137da938-cace-4906-a921-8301ee0d104a"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7cfc4d64-cd82-4c2e-9bab-462c5a2f86dc",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "context_related",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8785f715-cc3f-4fd3-8c45-06f1db8488bb",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "gmail_related",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -592,
+        192
+      ],
+      "id": "908351a7-a576-4f2f-a227-8c7e47d7a545",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than:3d",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n}"
+      },
+      "name": "List Messages for Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        1840
+      ],
+      "id": "922850cc-3770-4334-974c-eeb43be4cc8e"
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages?q=newer_than:{{ $('Code4').item.json.summarize_dates || 7}}d",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{ $json.access_token }}\"\n}"
+      },
+      "name": "List Messages for Inbox Summarization",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        528,
+        928
+      ],
+      "id": "c76c5557-9e8d-4bb2-955c-9a9e00a76364"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5f97ae85-7832-4bd5-9145-0f2e1293a85e",
+              "name": "access_token",
+              "value": "={{ $json.access_token }}",
+              "type": "string"
+            },
+            {
+              "id": "c15d8b39-818c-41fa-a634-4682e56b968b",
+              "name": "sub_intent",
+              "value": "={{ $('Code4').item.json.sub_intent }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        1168
+      ],
+      "id": "988d419f-e14f-4699-85b7-f8a0fab2910d",
+      "name": "Set Access Token"
+    },
+    {
+      "parameters": {
+        "jsCode": "function getEmailBody(payload) {\n  if (payload.body && payload.body.data) {\n    return payload.body.data;\n  }\n  if (payload.parts && Array.isArray(payload.parts)) {\n    let plain = payload.parts.find(p => p.mimeType === \"text/plain\" && p.body && p.body.data);\n    if (plain) return plain.body.data;\n    let html = payload.parts.find(p => p.mimeType === \"text/html\" && p.body && p.body.data);\n    if (html) return html.body.data;\n  }\n  return null;\n}\n\n// ---------- New helper section to extract name + email ----------\nfunction getHeader(headers, key) {\n  return (headers || []).find(h => h.name?.toLowerCase() === key.toLowerCase())?.value || null;\n}\n\nfunction extractNameEmail(headerVal) {\n  if (!headerVal) return { name: \"\", email: \"\" };\n  const s = String(headerVal).trim();\n\n  // \"Name\" <email>\n  const m1 = s.match(/^(.*)<([^>]+)>$/);\n  if (m1) {\n    const name = m1[1].trim().replace(/^[\"']|[\"']$/g, \"\");\n    const email = m1[2].trim();\n    return { name, email };\n  }\n\n  // bare email or name + email without brackets\n  const m2 = s.match(/([^\\s<>\"']+@[^\\s<>\"']+)/);\n  const email = m2 ? m2[1] : \"\";\n  const name = email ? s.replace(email, \"\").trim().replace(/^[\"']|[\"']$/g, \"\") : \"\";\n  return { name, email: email || s };\n}\n\nfunction getSender(payload) {\n  const v = getHeader(payload.headers, \"From\");\n  return extractNameEmail(v);\n}\n\nfunction getTo(payload) {\n  const v = getHeader(payload.headers, \"To\");\n  return extractNameEmail(v);\n}\n// ---------------------------------------------------------------\n\nfunction getSubject(payload) {\n  let subjectHeader = (payload.headers || []).find(h => h.name.toLowerCase() === \"subject\");\n  return subjectHeader ? subjectHeader.value : null;\n}\n\nfunction getDate(payload) {\n  let dateHeader = (payload.headers || []).find(h => h.name.toLowerCase() === \"date\");\n  return dateHeader ? dateHeader.value : null;\n}\n\n// 1. Auto-detect user's own address from INBOX messages\nlet userEmail = null;\nfor (const item of items) {\n  const labelIds = item.json.labelIds || [];\n  if (labelIds.includes(\"INBOX\")) {\n    const payload = item.json.payload || {};\n    const { email: toEmail } = getTo(payload);\n    if (toEmail) {\n      userEmail = toEmail;\n      break;\n    }\n  }\n}\n\n// 2. Process INBOX + SENT messages\nreturn items\n  .filter(item => {\n    const labelIds = item.json.labelIds || [];\n    return labelIds.includes(\"INBOX\") || labelIds.includes(\"SENT\");\n  })\n  .map(item => {\n    const payload = item.json.payload || {};\n    const labelIds = item.json.labelIds || [];\n\n    // Extract full name + email objects\n    const { name: sender_name, email: sender_email } = getSender(payload);\n    const { name: to_name, email: to_email } = getTo(payload);\n\n    // Logic: if SENT, receiver is “to”; if INBOX, receiver is the user\n    const receiver_email = labelIds.includes(\"SENT\") ? to_email : (userEmail || to_email);\n    const receiver_name = labelIds.includes(\"SENT\") ? to_name : \"\";\n\n    return {\n      json: {\n        id: item.json.id,\n        thread_id: item.json.threadId,\n        labelIds,\n        body_base64: getEmailBody(payload),\n        sender_email,\n        sender_name,        // ✅ ADDED\n        receiver_email,\n        receiver_name,      // ✅ ADDED\n        subject: getSubject(payload),\n        date: getDate(payload)\n      }\n    };\n  });\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        1840
+      ],
+      "id": "d769df3e-14b5-4770-9255-6fcc1bc874bc",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get data from node names\nconst gmailMessages = $items(\"List Messages for Context\")[0].json.messages;\nconst supabaseRows = $items(\"Fetch existing id's\");\n\n// Build a Set for fast lookup of saved IDs\nconst savedIds = new Set(supabaseRows.map(row => row.json.id));\n\n// Only keep Gmail messages whose id is NOT in Supabase\nconst newMessages = gmailMessages.filter(msg => !savedIds.has(msg.id));\n\n// Return each as a new item for downstream processing\nreturn newMessages.map(msg => ({ json: msg }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        1840
+      ],
+      "id": "6f658ff9-8f90-43ef-a89e-f4d495801853",
+      "name": "Code1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "user_inbox_context",
+        "limit": 900,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').first().json.body.userId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        1840
+      ],
+      "id": "42043d28-36b9-4f3a-a687-ab2ada744db3",
+      "name": "Fetch existing id's",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connector.saai.dev/webhook/insert-to-pinecone",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "emails",
+              "value": "={{ $json.data }}"
+            },
+            {
+              "name": "user_id",
+              "value": "={{ $('Webhook').first().json.body.userId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        752,
+        1744
+      ],
+      "id": "ab167a60-cc9b-4e3c-acaf-4b181a4dd54b",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combine all input items into a single array under \"data\"\nreturn [\n  {\n    json: {\n      data: items.map(item => item.json)\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        1744
+      ],
+      "id": "bb859ee9-1615-48b7-91ee-7e6ab908bbe1",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1104,
+        1008
+      ],
+      "id": "ad2ff79c-0dba-4d1a-8584-825e47f54940",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  let rawOutput = item.json.output || \"\";\n  \n  // Remove markdown code fences if present\n  let cleanedOutput = rawOutput\n    .replace(/```json/i, \"\")   // remove opening ```json (case-insensitive)\n    .replace(/```/g, \"\")       // remove closing ```\n    .trim();\n\n  let parsedOutput = {};\n  try {\n    parsedOutput = JSON.parse(cleanedOutput);\n  } catch (err) {\n    // Fallback: keep raw string so workflow doesn’t break\n    parsedOutput = { raw_output: rawOutput };\n  }\n\n  return {\n    json: {\n      ...parsedOutput,\n      myNewField: item.json.myNewField ?? null // keep custom field if present\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        784
+      ],
+      "id": "47d40e6c-6e73-41c1-9524-b40d799b7fc1",
+      "name": "Code4"
+    },
+    {
+      "parameters": {
+        "description": "Always retrieve complete emails, not just entities.\n\nSchema:\n\npageContent: full email text (headers + body)\n\nmetadata: sender_name, sender_email, subject, date, date_epoch\n\nRetrieval logic:\n\nFor any query (even single-word, e.g., “devang”), treat it as a sender/receiver/person/topic filter — not a keyword lookup.\n\nAlways search across both pageContent and metadata fields together (sender_name, sender_email, subject, and body text).\n\nIf query token count ≤ 2 or vague (name-only / no clear topic):\n\nFallback strategy:\n\nRun metadata match on sender_name and sender_email (partial + fuzzy).\n\nExpand with variants like lowercase, initials, and domain (@, .com).\n\nThen perform a broad vector search on pageContent.\n\nMerge and deduplicate results by metadata.subject + metadata.date_epoch.\n\nGuarantee minimum 10 and up to 50 hits.\n\nRank results by latest metadata.date_epoch, then semantic similarity.\n\nAlways return full email context (subject, sender_name, sender_email, date, and a brief overview from pageContent).\n\nRule: Never stop at the identity or sender details — must always output email-level data.\n\nIf zero matches: Automatically broaden query to include partial/fuzzy matches in both sender_name and sender_email.",
+        "topK": "=60"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1.1,
+      "position": [
+        1904,
+        336
+      ],
+      "id": "95099d7c-72d0-44a9-b9c2-3dcfddfb6c0a",
+      "name": "Vector Store Retrieval1",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1936,
+        672
+      ],
+      "id": "b0beafce-7fe1-4f75-ba12-74d26b1955db",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "email-context",
+          "mode": "id"
+        },
+        "options": {
+          "pineconeNamespace": "={{ $('Webhook').first().json.body.userId }}-ns"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.1,
+      "position": [
+        1808,
+        544
+      ],
+      "id": "0c12e322-1e6c-4a4b-b7e7-59e034a2fdcd",
+      "name": "Pinecone Vector Store2",
+      "credentials": {
+        "pineconeApi": {
+          "id": "mX5Mp9fM0gydbhMt",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/threads/{{ $json.messages[0].threadId }}?format=full ",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('Exchange Refresh Token').item.json.access_token}}\"\n}"
+      },
+      "name": "List thread",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        976,
+        1264
+      ],
+      "id": "89cbc233-d2b3-44bf-bdf9-25bf2e153162"
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages?q=subject:\"{{ $('Webhook').item.json.body.subjectLine }}\"\n",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('Exchange Refresh Token').item.json.access_token}}\",\n \"Content-Type\": \"application/json\"\n}"
+      },
+      "name": "Thread summarize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        528,
+        1264
+      ],
+      "id": "bae50c61-5a45-49e8-beb6-ebf01f85c997"
+    },
+    {
+      "parameters": {
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/threads/{{ $json.messages[0].threadId }}\n\n",
+        "jsonParameters": true,
+        "options": {},
+        "headerParametersJson": "={\n  \"Authorization\": \"Bearer {{$('Exchange Refresh Token').item.json.access_token}}\",\n \"Content-Type\": \"application/json\"\n}"
+      },
+      "name": "Thread summarize1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        752,
+        1264
+      ],
+      "id": "5ffc8b8d-589a-4b2d-aa28-4ce9d3092b19"
+    },
+    {
+      "parameters": {
+        "jsCode": "function decodeBase64(str) {\n  if (!str) return '';\n  try {\n    return Buffer.from(str, 'base64').toString('utf-8');\n  } catch (e) {\n    return '';\n  }\n}\n\nfunction getEmailBody(payload) {\n  if (!payload) return '';\n  if (payload.parts && Array.isArray(payload.parts)) {\n    for (const part of payload.parts) {\n      if (part.mimeType === 'text/plain' && part.body && part.body.data) {\n        return part.body.data;\n      }\n    }\n  }\n  if (payload.body && payload.body.data) {\n    return payload.body.data;\n  }\n  return '';\n}\n\nfunction getSenderEmail(payload) {\n  const headers = payload.headers || [];\n  const fromHeader = headers.find(h => h.name.toLowerCase() === 'from');\n  return fromHeader ? fromHeader.value : 'Unknown sender';\n}\n\nfunction getDate(payload) {\n  const headers = payload.headers || [];\n  const dateHeader = headers.find(h => h.name.toLowerCase() === 'date');\n  return dateHeader ? dateHeader.value : 'Unknown date';\n}\n\nreturn [\n  {\n    json: {\n      combinedFormattedThread: items[0].json.messages.map((msg, index) => {\n        const payload = msg.payload || {};\n        const sender = getSenderEmail(payload);\n        const date = getDate(payload);\n        let body = decodeBase64(getEmailBody(payload)) || 'No body found';\n\n        // Cleanup body text\n        body = body\n          .replace(/\\r\\n/g, '\\n')\n          .replace(/\\n{3,}/g, '\\n\\n')           // Collapse too many breaks\n          .replace(/\\|+$/, '')                  // Remove stray pipes\n          .trim();\n\n        // Optional: strip quoted replies\n        const replyIndex = body.indexOf('On ');\n        if (replyIndex > 50) body = body.slice(0, replyIndex).trim();\n\n        return `Message ${index + 1}\\nFrom: ${sender}\\nDate: ${date}\\nBody:\\n${body}\\n---\\n`;\n      }).join('\\n')\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        1360
+      ],
+      "id": "a8a5018c-eaf2-4b1c-b8b9-d13ff466199a",
+      "name": "Code5"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are **Sa.AI**, a Gmail inbox assistant.\n\nBelow is the raw Gmail data you will process.\n\n---\n\n## EMAIL DATA\n{{ $json.merged_text }}\n\n---\n\n## GOAL\nAnalyze **INBOX** emails only and return a strict JSON summary grouped into:\n- `high_priority_emails`\n- `medium_priority`\n- `low_priority`\n- `already_replied_closed_threads`\n- `missed_or_ignored_emails`\n\n---\n\n## EMAIL OBJECT FIELDS\nEach email object MUST have:\n- **subject** → Original subject of the latest INBOX email in the thread (no case normalization here)\n- **sender** → \"From:\" address of latest INBOX email in the thread\n- **date** → Exact email Date from Gmail (RFC 2822 format, e.g., \"13 Aug 2025\")\n- **next_action** → Imperative instruction (≤18 words) describing the exact next step for the user\n\n\nEVALUATION & CLASSIFICATION (STRICT)\n\nSCOPE\n- Classify one thread at a time based ONLY on the latest INBOX message + metadata (`subject`, `from`, `days_old`, `already_replied`, `closure_cue`).\n- You may read `full_transcript` only to craft `next_action` (ignore quoted history blocks that begin with “On <date> <name> wrote:”).\n- Preserve input order. Each thread must appear in exactly one bucket (except Closed which is exclusive).\n\nHARD PRECEDENCE (no overlaps)\n1) CLOSED → place in `already_replied_closed_threads` only.\n   - CLOSED means: `already_replied === true` AND `closure_cue` (case-insensitive, substring ok) matches one of:\n     paid, payment received, resolved, fixed, shipped, delivered, scheduled, confirmed, approved, declined, completed, canceled, closed, refunded, processed\n   - If `already_replied === true` but `closure_cue` is null/absent/non-conclusive → NOT Closed; classify as High/Medium/Low instead.\n\n2) HIGH → if any High trigger (see “HIGH PRIORITY” below).\n\n3) MEDIUM → if action required but no High trigger.\n\n4) LOW → otherwise.\n\n5) MISSED/IGNORED → only if NOT Closed, `already_replied === false`, `days_old >= 4`, and the latest INBOX implies an action (verbs like please/kindly/confirm/share/send/provide/approve/schedule/update/respond/acknowledge). Items placed here must not appear in High/Medium/Low.\n\nHIGH PRIORITY (latest INBOX contains any)\n- Urgency/time: urgent, asap, immediately, escalation, final notice, overdue, deadline, EOD, today, tomorrow.\n- Financial/legal/contract risk: invoice/payment/contract due or overdue, penalties, compliance/tax/legal deadlines, refund/chargeback, wire/explicit amounts.\n- Operational blockers: outage/incident/security alert, build/test failed, critical bug, data loss, go‑live/release ≤ 2 days.\n- VIP/business-critical inbound: investor/VC/board/C‑suite/key client/strategic partner requesting action.\n- Safety/facility emergencies (fire, water leak, hazard).\nALWAYS-HIGH overrides:\n- Any due/overdue/payment amount in latest INBOX.\n- Any outage/incident/build/test failed/critical bug/security/data-loss.\n- Any safety/facility emergency.\n- Inbound action request from investor/VC/board/C‑suite/key client.\n\nMEDIUM PRIORITY (actionable without High triggers)\n- Action needed but no immediate financial/legal/operational risk and no urgency terms listed above.\n- Typical: pricing/quotations, renewals, listings; vendor/partner asks; procurement/SOW steps; recruiting/HR steps; scheduling where requested time is ≥ 3 days away; RFP/RFI with response window > 3 days; reports/dashboards to acknowledge/route; announcements needing prep (read/review/assign) but not immediate action.\n- Meeting/time language that is already in the past relative to `days_old` → treat as action to “Reschedule” or “Propose new time” (do NOT say “Join today” if `days_old` ≥ 1).\n- Investor/VC/Board/C‑suite/Key client inbound: If urgent/financial/operational → HIGH; else → MEDIUM; never LOW or MISSED.\n\nLOW PRIORITY\n- Social/non‑critical catch‑ups.\n- Newsletters, generic marketing/promotions.\n- Pure FYI with no ask and no prep needed.\n\nMISSED OR IGNORED EMAILS (exclusive bucket)\nInclude only if all are true:\n- Not Closed.\n- `already_replied === false`.\n- `days_old >= 4`.\n- Latest INBOX implies an action request (request verbs above).\nExclude social/marketing/newsletters.\nItems here must not appear in High/Medium/Low.\n\nALREADY REPLIED / CLOSED THREADS (format + admission)\n- Include only if CLOSED per above.\n- Fields must be populated:\n  - subject = latest INBOX subject (verbatim, keep “Re:”/“Fwd:” as-is)\n  - sender  = latest INBOX `from`\n  - \"days old\" = integer `days_old`\n  - next_action = \"\" (empty string only)\n\nNEXT_ACTION RULES (for High/Medium/Low/Missed ONLY)\n- Start with a verb (Confirm, Send, Share, Call, Approve, Schedule, Provide, Arrange, Reschedule).\n- ≤ 12 words; concrete; no hedging (“maybe/check/try”).\n- Base strictly on the latest INBOX (ignore quoted history).\n- For newsletters/FYI in Low, you may use “Review and archive”.\n\nCOMPLETENESS GUARD (no silent drops)\n-Completeness Guard\n\nAfter classification, count total items across all five arrays.\n\nIf the number is less than total threads, identify missing thread_keys and put them in Low Priority with next_action = \"Review and archive\".\n\nRepeat until counts match.\n\nTIE-BREAKERS\n- Any High trigger present → HIGH.\n- If both Medium and Low fit → MEDIUM.\n- If still uncertain → LOW (but never drop the thread).\n\nOUTPUT SCHEMA (must be exact)\nReturn:\n[\n  {\n    \"reply\": \"{\\\"high_priority_emails\\\":[{\\\"subject\\\":\\\"<s>\\\",\\\"sender\\\":\\\"<from>\\\",\\\"days old\\\":<int>,\\\"next_action\\\":\\\"<text>\\\"}],\\\"medium_priority\\\":[],\\\"low_priority\\\":[],\\\"already_replied_closed_threads\\\":[{\\\"subject\\\":\\\"<s>\\\",\\\"sender\\\":\\\"<from>\\\",\\\"days old\\\":<int>,\\\"next_action\\\":\\\"\\\"}],\\\"missed_or_ignored_emails\\\":[{\\\"subject\\\":\\\"<s>\\\",\\\"sender\\\":\\\"<from>\\\",\\\"days old\\\":<int>,\\\"next_action\\\":\\\"<text>\\\"}]}\"\n  }\n]\n\n\nNow produce the JSON response exactly as specified."
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2592,
+        928
+      ],
+      "id": "f94564a8-b651-4cf6-b65f-b7c09cd24f20",
+      "name": "Message a model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ================== Sa.AI Inbox Function (compressed, single output) ==================\n\n// ---------- Tunables ----------\nconst MAX_MSGS_PER_THREAD = 4;      // total messages to keep in transcript\nconst MAX_BODY_CHARS = 600;         // per-message body cap\nconst INCLUDE_FULL_TRANSCRIPT = false; // keep compact only to reduce size\n\n// ---------- Helpers ----------\nconst MS_PER_DAY = 24 * 60 * 60 * 1000;\n\nconst cleanText = (s = \"\") =>\n  String(s)\n    .replace(/\\r/g, \"\\n\")\n    .replace(/[ \\t]+\\n/g, \"\\n\")\n    .replace(/\\n{3,}/g, \"\\n\\n\")\n    .trim();\n\nconst norm = (s) => String(s || \"\").toLowerCase().trim();\n\nfunction parseTs(dateStr) {\n  if (!dateStr) return null;\n  const d = new Date(dateStr);\n  return Number.isFinite(d.getTime()) ? d : null;\n}\n\nfunction daysOldFrom(dateStr) {\n  const d = parseTs(dateStr);\n  if (!d) return null;\n  const now = new Date();\n  const diff = now.getTime() - d.getTime();\n  return diff < 0 ? 0 : Math.floor(diff / MS_PER_DAY);\n}\n\nfunction dubaiDisplayDate(dateStr) {\n  const d = parseTs(dateStr);\n  if (!d) return \"\";\n  return d.toLocaleDateString(\"en-GB\", {\n    day: \"2-digit\", month: \"short\", year: \"numeric\",\n    timeZone: \"Asia/Dubai\"\n  });\n}\n\n// Keep only the new text (remove quoted tails)\nfunction stripQuotedTail(body = \"\") {\n  if (!body) return \"\";\n  const b = cleanText(body);\n  const markers = [\n    /^On .+ wrote:\\s*$/mi,\n    /^-{2,}\\s*Original Message\\s*-{2,}\\s*$/mi,\n    /^From:\\s.*$/mi,\n  ];\n  let cut = b.length;\n  for (const re of markers) {\n    const m = b.match(re);\n    if (m && m.index < cut) cut = m.index;\n  }\n  let head = b.slice(0, cut);\n  head = head.split(\"\\n\").filter(line => !/^\\s*>/.test(line)).join(\"\\n\");\n  return cleanText(head);\n}\n\nfunction trimBody(b, max = MAX_BODY_CHARS) {\n  const s = cleanText(b || \"\");\n  return s.length > max ? s.slice(0, max) + \" …\" : s;\n}\n\nconst hasLabel = (m, name) =>\n  Array.isArray(m.labelIds) && m.labelIds.includes(name);\n\n// ---------- Robust Input Normalization ----------\nconst collectRawMessages = (items) => {\n  const out = [];\n  for (const it of items) {\n    const j = it?.json ?? it;\n\n    // If looks like our own output (avoid loops)\n    if (j && j.merged_text && Array.isArray(j.threads)) {\n      continue;\n    }\n    if (Array.isArray(j)) {\n      for (const m of j) {\n        if (m && (m.subject || m.Subject || m.body_decoded || m.snippet)) out.push(m);\n      }\n      continue;\n    }\n    if (j && Array.isArray(j.threads)) {\n      const looksLikeMessage = (m) =>\n        !!(m && (m.subject || m.Subject) && (m.sender_email || m.From) && (m.receiver_email || m.To));\n      if (j.threads.every(looksLikeMessage)) {\n        out.push(...j.threads);\n        continue;\n      }\n      continue; // thread objects => skip\n    }\n    if (j && (j.subject || j.Subject || j.body_decoded || j.snippet)) out.push(j);\n  }\n  return out;\n};\n\nconst raw = collectRawMessages(items);\n\n// ---------- Mailbox detection ----------\nconst toCounts = {};\nfor (const e of raw) {\n  const to = norm(e.receiver_email || e.To);\n  if (to) toCounts[to] = (toCounts[to] || 0) + 1;\n}\nlet userMailbox = Object.entries(toCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || \"\";\nif (!userMailbox && items?.[0]?.json?.user_mailbox) {\n  userMailbox = norm(items[0].json.user_mailbox);\n}\n\n// ---------- Direction checks (mutually exclusive) ----------\nconst isInbox = (m) => {\n  const recv = norm(m.receiver_email || m.To);\n  if (recv && recv === userMailbox) return true;\n  return hasLabel(m, \"INBOX\");\n};\nconst isSent = (m) => {\n  const snd = norm(m.sender_email || m.From);\n  if (snd && snd === userMailbox) return true;\n  return hasLabel(m, \"SENT\");\n};\n\n// ---------- Thread bucketing ----------\nfunction normalizeSubject(sub = \"\") {\n  return String(sub).toLowerCase().replace(/^\\s*(re:|fwd:)\\s*/gi, \"\").replace(/\\s+/g, \" \").trim();\n}\n\nconst buckets = new Map();\nfor (const e of raw) {\n  const key = e.thread_id || e.threadId\n    ? `tid:${e.thread_id || e.threadId}`\n    : `subj:${normalizeSubject(e.subject || e.Subject || \"\")}::${norm(e.sender_email || e.From)}`;\n  if (!buckets.has(key)) buckets.set(key, []);\n  buckets.get(key).push(e);\n}\n\n// ---------- Classifier configs ----------\nconst VIP_SENDERS = new Set([\n  // \"ceo@company.com\"\n]);\nconst RE_URGENT  = /\\b(urgent|outage|escalation|sev[-\\s]*[12]|critical|legal|final notice)\\b/i;\nconst RE_INVOICE = /\\b(invoice|payment|overdue|fedwire|wire|remit|past due)\\b/i;\nconst RE_CLOSURE = /\\b(received|resolved|fixed|delivered|issue closed|payment received|thanks for resolving)\\b/i;\nconst RE_REF     = /\\b(FEDWIRE#\\s*[\\w-]+|INV[-\\s]*\\d{3,}|[A-Z]{2,}\\d{3,})\\b/;\n\n// ---------- Build outputs ----------\nconst blocks = [];\nconst threads = [];\nconst refIndex = new Map(); // refId -> { paid, overdue, thread_keys: Set() }\n\nfor (const [key, msgsAll] of buckets.entries()) {\n  // De-dup messages\n  const seenMsg = new Set();\n  const msgs = [];\n  for (const m of msgsAll) {\n    const mid = m.message_id || m.messageId || `${m.date || m.Date}::${m.subject||m.Subject}::${m.sender_email||m.From}`;\n    if (!seenMsg.has(mid)) {\n      seenMsg.add(mid);\n      msgs.push(m);\n    }\n  }\n\n  // Sort oldest→newest\n  msgs.sort((a,b) => {\n    const ta = parseTs(a.date || a.Date)?.getTime() || 0;\n    const tb = parseTs(b.date || b.Date)?.getTime() || 0;\n    return ta - tb;\n  });\n\n  // Must have at least one INBOX message\n  const inboxMsgs = msgs.filter(isInbox);\n  if (!inboxMsgs.length) continue;\n\n  // Latest inbox for header\n  const latestInbox = inboxMsgs[inboxMsgs.length - 1];\n  const subject     = latestInbox.subject || latestInbox.Subject || \"\";\n  const from        = latestInbox.sender_email || latestInbox.From || \"\";\n  const to          = latestInbox.receiver_email || latestInbox.To || \"\";\n  const dateStr     = latestInbox.date || latestInbox.Date || \"\";\n  const daysOld     = daysOldFrom(dateStr);\n  const dateDisplay = dubaiDisplayDate(dateStr);\n\n  // Already replied? any SENT after latest inbox\n  const latestInboxTs = parseTs(dateStr)?.getTime() || 0;\n  const laterSent = msgs.some(m => isSent(m) && (parseTs(m.date || m.Date)?.getTime() || 0) > latestInboxTs);\n  const alreadyReplied = !!laterSent;\n\n  // --------- COMPRESSION LOGIC ----------\n  // 1) Build minimal set of message indices to include:\n  //    - first INBOX (context) if exists\n  //    - latest INBOX (the \"ask\")\n  //    - any SENT messages after latest INBOX (your responses)\n  const idxFirstInbox = msgs.findIndex(isInbox);\n  const idxLatestInbox = msgs.lastIndexOf(latestInbox);\n  const includeIdx = new Set();\n\n  if (idxFirstInbox >= 0) includeIdx.add(idxFirstInbox);\n  includeIdx.add(idxLatestInbox);\n\n  msgs.forEach((m, idx) => {\n    if (isSent(m)) {\n      const t = parseTs(m.date || m.Date)?.getTime() || 0;\n      if (t > latestInboxTs) includeIdx.add(idx);\n    }\n  });\n\n  // 2) If we still have room, backfill one earlier message before latest inbox (context), then one after (if any)\n  if (includeIdx.size < MAX_MSGS_PER_THREAD) {\n    for (let i = idxLatestInbox - 1; i >= 0 && includeIdx.size < MAX_MSGS_PER_THREAD; i--) {\n      includeIdx.add(i);\n    }\n  }\n  if (includeIdx.size < MAX_MSGS_PER_THREAD) {\n    for (let i = idxLatestInbox + 1; i < msgs.length && includeIdx.size < MAX_MSGS_PER_THREAD; i++) {\n      includeIdx.add(i);\n    }\n  }\n\n  // 3) Build compact transcript in chronological order with body trimming and duplicate-body collapse\n  const keepIdx = Array.from(includeIdx).sort((a,b)=>a-b);\n  const bodySeen = new Set();\n  const lines = [];\n  lines.push(\"----- THREAD START -----\");\n  keepIdx.forEach((idx, i) => {\n    const m = msgs[idx];\n    const dir = isSent(m) ? \"SENT\" : (isInbox(m) ? \"INBOX\" : \"OTHER\");\n    const mSubj = m.subject || m.Subject || \"\";\n    const mFrom = m.sender_email || m.From || \"\";\n    const mTo   = m.receiver_email || m.To || \"\";\n    const mDate = m.date || m.Date || \"\";\n    const mDays = daysOldFrom(mDate);\n    const mDateDisp = dubaiDisplayDate(mDate);\n    const rawBody = m.body_decoded || m.snippet || \"\";\n    const topBody = trimBody(stripQuotedTail(rawBody));\n    const bodyKey = norm(topBody).slice(0, 64); // small hash-ish\n\n    if (!topBody || bodySeen.has(bodyKey)) {\n      // Skip empty or duplicate content blocks\n      lines.push(`### Message ${i + 1} — ${dir}`);\n      lines.push(`Subject: ${mSubj}`);\n      lines.push(`From: ${mFrom}`);\n      lines.push(`To: ${mTo}`);\n      lines.push(`Date: ${mDateDisp}${mDays != null ? ` (${mDays} days old)` : \"\"}`);\n      lines.push(`Body:\\n`);\n    } else {\n      bodySeen.add(bodyKey);\n      lines.push(`### Message ${i + 1} — ${dir}`);\n      lines.push(`Subject: ${mSubj}`);\n      lines.push(`From: ${mFrom}`);\n      lines.push(`To: ${mTo}`);\n      lines.push(`Date: ${mDateDisp}${mDays != null ? ` (${mDays} days old)` : \"\"}`);\n      lines.push(`Body:\\n${topBody}`);\n    }\n  });\n  lines.push(\"----- THREAD END -----\");\n  const compactTranscript = lines.join(\"\\n\");\n\n  // Signals for pre-classifier\n  const subjBody = `${subject}\\n${compactTranscript}`;\n  const senderEmail = norm(from);\n  const refMatch = subjBody.match(RE_REF);\n  const refId = refMatch ? refMatch[1].replace(/\\s+/g, \"\") : \"\";\n\n  const signals = {\n    is_unread: hasLabel(latestInbox, \"UNREAD\") ? true : false, // keep simple/strict\n    is_vip: VIP_SENDERS.has(senderEmail),\n    has_urgent_terms: RE_URGENT.test(subjBody),\n    has_invoice_terms: RE_INVOICE.test(subjBody),\n    closure_cue: (subjBody.match(RE_CLOSURE)?.[0] || \"\"),\n    ref_id: refId,\n  };\n\n  // Proposed deterministic category\n  let proposed = \"low_priority\";\n  if (alreadyReplied && signals.closure_cue) {\n    proposed = \"already_replied\";\n  } else if (signals.has_urgent_terms || signals.is_vip) {\n    proposed = \"high_priority\";\n  } else if (signals.has_invoice_terms && !signals.closure_cue) {\n    proposed = \"high_priority\";\n  } else if (signals.is_unread && Number.isFinite(daysOld) && daysOld >= 3) {\n    proposed = \"missed_or_ignored\";\n  } else if (/\\b(please (confirm|approve|share|schedule)|can you|kindly|need your|action required)\\b/i.test(subjBody)) {\n    proposed = \"medium_priority\";\n  }\n\n  // Human-readable block (compact)\n  const header = [\n    `Subject - ${subject}`,\n    `From: ${from}`,\n    `to - ${to}`,\n    `Date: ${dateDisplay}${daysOld != null ? ` (${daysOld} days old)` : \"\"}`,\n    `already replied - ${alreadyReplied ? \"true\" : \"false\"}`,\n    `Body:\\n${compactTranscript}`\n  ].join(\"\\n\");\n  blocks.push(header);\n\n  // Thread object\n  const labelsArr = Array.isArray(latestInbox.labelIds) ? latestInbox.labelIds : [];\n  const threadObj = {\n    thread_key: key,\n    thread_size: msgs.length,\n    subject,\n    from,\n    to,\n    date: dateStr,\n    date_display: dateDisplay,\n    days_old: daysOld ?? 0,\n    labels: labelsArr,\n    already_replied: alreadyReplied,\n    closure_cue: signals.closure_cue || null,\n    full_transcript: INCLUDE_FULL_TRANSCRIPT ? compactTranscript : undefined,\n    signals,\n    proposed_category: proposed\n  };\n  threads.push(threadObj);\n\n  // Build refIndex for conflicts\n  if (signals.ref_id) {\n    const bucket = refIndex.get(signals.ref_id) || { paid: false, overdue: false, thread_keys: new Set() };\n    if (/\\b(payment received|paid|remitted)\\b/i.test(subjBody)) bucket.paid = true;\n    if (/\\b(final notice|overdue|past due)\\b/i.test(subjBody)) bucket.overdue = true;\n    bucket.thread_keys.add(key);\n    refIndex.set(signals.ref_id, bucket);\n  }\n}\n\n// ---------- Cross-thread conflict resolution ----------\nfor (const [refId, info] of refIndex.entries()) {\n  if (info.paid && info.overdue) {\n    for (const th of threads) {\n      if (th.signals.ref_id === refId) {\n        if (th.proposed_category === \"high_priority\" &&\n            /\\b(overdue|final notice|past due)\\b/i.test(th.signals.ref_id + \" \" + th.subject)) {\n          th.proposed_category = \"medium_priority\";\n        }\n      }\n    }\n  }\n}\n\n// ---------- Final single output ----------\nconst merged_text = blocks.join(\"\\n\\n====\\n\\n\");\n\nreturn [\n  {\n    json: {\n      merged_text\n    }\n  }\n];\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        928
+      ],
+      "id": "2da99c46-b9b1-49ec-91d0-7043c75e37a8",
+      "name": "Code6"
+    },
+    {
+      "parameters": {
+        "jsCode": "function decodeQuotedPrintable(str) {\n  if (!str) return \"\";\n  // Replace =XX (hex) with corresponding character\n  return str\n    .replace(/=\\r?\\n/g, \"\") // remove soft line breaks\n    .replace(/=([A-Fa-f0-9]{2})/g, (match, hex) => {\n      return String.fromCharCode(parseInt(hex, 16));\n    });\n}\n\nfunction decodeEmailData(str, contentTransferEncoding) {\n  if (!str) return null;\n\n  // Gmail URL-safe Base64 → standard\n  str = str.replace(/-/g, '+').replace(/_/g, '/');\n  let decoded = Buffer.from(str, 'base64').toString('utf-8');\n\n  // Handle quoted-printable if needed\n  if (contentTransferEncoding && contentTransferEncoding.toLowerCase() === 'quoted-printable') {\n    decoded = decodeQuotedPrintable(decoded);\n  }\n\n  return decoded;\n}\n\nfunction getEmailBody(payload) {\n  if (!payload) return null;\n\n  if (payload.body?.data) {\n    const encoding = payload.headers?.find(h => h.name.toLowerCase() === 'content-transfer-encoding')?.value;\n    return decodeEmailData(payload.body.data, encoding);\n  }\n\n  if (Array.isArray(payload.parts)) {\n    for (const part of payload.parts) {\n      if (part.mimeType === \"text/plain\" && part.body?.data) {\n        const encoding = part.headers?.find(h => h.name.toLowerCase() === 'content-transfer-encoding')?.value;\n        return decodeEmailData(part.body.data, encoding);\n      }\n    }\n    for (const part of payload.parts) {\n      const nested = getEmailBody(part);\n      if (nested) return nested;\n    }\n  }\n\n  return null;\n}\n\nfunction getHeaderValue(payload, name) {\n  const header = (payload.headers || []).find(h => h.name.toLowerCase() === name.toLowerCase());\n  return header ? header.value : null;\n}\n\nfunction getSenderEmail(payload) {\n  const from = getHeaderValue(payload, 'from');\n  if (!from) return null;\n  const match = from.match(/<?([\\w\\.-]+@[\\w\\.-]+\\.\\w+)>?/);\n  return match ? match[1] : null;\n}\n\nfunction getToEmail(payload) {\n  const to = getHeaderValue(payload, 'to');\n  if (!to) return null;\n  const match = to.match(/<?([\\w\\.-]+@[\\w\\.-]+\\.\\w+)>?/);\n  return match ? match[1] : null;\n}\n\nfunction getSubject(payload) { return getHeaderValue(payload, 'subject'); }\nfunction getDate(payload) { return getHeaderValue(payload, 'date'); }\n\n// 1. Auto-detect user's email from any INBOX message's \"To\" header\nlet userEmail = null;\nfor (const item of items) {\n  if ((item.json.labelIds || []).includes(\"INBOX\")) {\n    const to = getToEmail(item.json.payload || {});\n    if (to) {\n      userEmail = to.toLowerCase();\n      break;\n    }\n  }\n}\n\n// 2. Process emails\nreturn items\n  .filter(item => {\n    const labels = item.json.labelIds || [];\n    return labels.includes(\"INBOX\") || labels.includes(\"SENT\");\n  })\n  .map(item => {\n    const payload = item.json.payload || {};\n    const labels = item.json.labelIds || [];\n    const receiver_email = labels.includes(\"SENT\") ? getToEmail(payload) : userEmail;\n\n    return {\n      json: {\n        id: item.json.id,\n        thread_id: item.json.threadId,\n        labelIds: labels,\n        body_decoded: getEmailBody(payload),\n        sender_email: getSenderEmail(payload),\n        receiver_email: receiver_email,\n        subject: getSubject(payload),\n        date: getDate(payload)\n      }\n    };\n  });\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        928
+      ],
+      "id": "f0ad55a9-1894-4f2f-a68a-55278deef327",
+      "name": "Code - decode base64"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ reply: $json.reply }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        3168,
+        208
+      ],
+      "id": "bd7aab9a-61ed-4b7c-8951-f49a30c15347",
+      "name": "Respond to Webhook3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "98e2bdbd-f300-4b3c-95b7-c9ce3d28e9b5",
+              "name": "reply",
+              "value": "={{ $json.bot_reply }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2944,
+        432
+      ],
+      "id": "022a2457-a7eb-4c0e-b5d3-4f7e3695bcfc",
+      "name": "Reply1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-4-turbo"
+        },
+        "options": {
+          "maxTokens": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1776,
+        336
+      ],
+      "id": "e849bfb2-52cb-4ff7-9417-62ca8ec25f42",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mode: Run Once for All Items (works per item too)\nreturn items.map(item => {\n  // 1) Get the raw reply text (string)\n  const raw = String(item.json.reply ?? item.json.output ?? \"\");\n\n  // 2) Strip accidental code fences\n  const unfenced = raw\n    .replace(/^\\s*```(?:json)?\\s*/i, \"\")\n    .replace(/\\s*```?\\s*$/i, \"\")\n    .trim();\n\n  // Helper: pretty format an email object/array to text\n  const formatEmails = (val) => {\n    const fmtOne = (o) => {\n      if (o && typeof o === \"object\") {\n        const subj = o.subject ?? \"(no subject)\";\n        const date = o.date ? ` — ${o.date}` : \"\";\n        const overview = o.overview ? `\\n   ${o.overview}` : \"\";\n        return `${subj}${date}${overview}`;\n      }\n      return String(o ?? \"\");\n    };\n\n    if (Array.isArray(val)) {\n      return val.map((o, i) => `${i + 1}. ${fmtOne(o)}`).join(\"\\n\");\n    }\n    if (val && typeof val === \"object\") {\n      return fmtOne(val);\n    }\n    return String(val ?? \"\");\n  };\n\n  // 3) Try to parse inner JSON (it may be a JSON string containing {\"bot_reply\": \"...\"} )\n  let botReply = \"\";\n  let inner;\n  try {\n    inner = JSON.parse(unfenced);\n\n    if (inner && typeof inner === \"object\" && \"bot_reply\" in inner) {\n      const br = inner.bot_reply;\n      // NEW: if array/object, render as readable lines, not JSON\n      if (Array.isArray(br) || (br && typeof br === \"object\")) {\n        botReply = formatEmails(br);\n      } else {\n        botReply = String(br ?? \"\");\n      }\n    } else if (typeof inner === \"string\") {\n      botReply = inner;\n    } else {\n      // If the whole thing is the array/object of emails, format it too\n      if (Array.isArray(inner) || (inner && typeof inner === \"object\")) {\n        botReply = formatEmails(inner);\n      } else {\n        botReply = String(inner ?? \"\");\n      }\n    }\n  } catch {\n    botReply = unfenced; // not JSON, use as-is\n  }\n\n  // Guard: if we still ended up with \"[object Object]\", try formatting again\n  if (/\\[object Object\\]/.test(botReply)) {\n    try {\n      const candidate =\n        inner && typeof inner === \"object\" && \"bot_reply\" in inner\n          ? inner.bot_reply\n          : inner ?? (item.json.reply ?? item.json.output ?? \"\");\n      botReply = formatEmails(candidate);\n    } catch {}\n  }\n\n  // Unescape \\n → real newlines (strings only)\n  if (typeof botReply === \"string\") {\n    botReply = botReply.replace(/\\\\n/g, \"\\n\").trim();\n  }\n\n  // 5) Return in your strict 5-key schema\n  return {\n    json: {\n      intent: \"context_related\",\n      sub_intent: \"\",\n      summarize_dates: \"\",\n      bot_reply: botReply,   // now nice text like:\n                             // Subject: steal this prompt Date: 2025-11-04\n                             //    Email from ...\n      explanation: \"Answer composed from retrieval evidence; cleaned from stringified JSON.\"\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        432
+      ],
+      "id": "f68dbb15-cb6d-4936-b0a3-931593a77977",
+      "name": "Code8"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5dfa08ff-fa2c-4cec-a650-fed72e1d3f42",
+              "leftValue": "={{ $json.sub_intent }}",
+              "rightValue": "webSearch",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        -256
+      ],
+      "id": "3f9ad9ce-2d2b-43fd-ae27-583c445bdd90",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.PERPLEXITY_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are Perplexity, a web-connected assistant. Provide accurate and concise answers with source citations.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Webhook').item.json.body.query }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1488,
+        -320
+      ],
+      "id": "2382b54f-700c-4dd8-b215-a36fc73756a5",
+      "name": "Perplexity API"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-nano",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-NANO"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Here is the Perplexity response: {{ $json.choices[0].message.content }}\n\nHere are the citations: {{ $json.citations }}"
+            },
+            {
+              "content": "You are given a response from Perplexity that contains content and citations.  \nReformat it into a structured JSON with one key only:\n\n{\n  \"bot_reply\": \"<a minimal summary as a labeled section (e.g. News, Update, Report, Summary, Insight, Brief, Alert, etc.) followed by a 'Sources' section in Markdown>\"\n}\n\n### Rules:\n- Keep the summary very short (2–3 sentences maximum).  \n- The summary must begin with a clear label: **News**, **Update**, **Report**, **Summary**, **Insight**, **Brief**, or **Alert** — whichever best matches the context of the information.  \n- Do not include unnecessary details, bullet points, or long explanations.  \n- Add a **Sources:** section at the end.  \n- Sources must always be listed as numbered Markdown links in this exact format:  \n  1. [Source Name](URL)  \n  2. [Source Name](URL)  \n- Never use footnote style like `[1]: URL`. Only use the numbered inline Markdown link format.  \n- In the summary text, use inline citations [1], [2] that map to the numbered sources.  \n- Output strictly valid JSON, with no extra text or commentary.\n\n",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2016,
+        -320
+      ],
+      "id": "423321e0-705e-49a8-89bd-40432bf38d3d",
+      "name": "Perplexity Response Structure",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the assistant content\nlet content = $json[\"message\"][\"content\"];\n\n// If content is already an object with bot_reply\nif (typeof content === \"object\" && content !== null && \"bot_reply\" in content) {\n  return [{ bot_reply: content.bot_reply }];\n}\n\n// Otherwise, treat as string\ncontent = String(content || \"\");\n\n// Remove code fences if present\nconst clean = content.replace(/```json|```/g, \"\").trim();\n\nlet parsed = {};\ntry {\n  parsed = JSON.parse(clean);\n} catch (e) {\n  parsed = { bot_reply: clean }; // fallback: just return raw text\n}\n\nreturn [{ bot_reply: parsed.bot_reply }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2656,
+        -320
+      ],
+      "id": "f9af6ddf-5d61-4e36-a44b-d18f2851e311",
+      "name": "Format Perplexity Response"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=INPUT FIELDS (from Webhook & Memory):\n- query: {{ $('Webhook').item.json.body.query || '' }}\n- subjectLine: {{ $('Webhook').item.json.body.subjectLine || '' }}\n- Memory: {{ JSON.stringify($json.Memory ?? []) }}    # may contain { n8n_response: \"<text>\", topic: \"<string>\" }",
+        "options": {
+          "systemMessage": "=🧠 Sa.AI — Deterministic Intent Classifier for Gmail Chatbot\n\nYou are a deterministic intent classifier for an Sa.AI Gmail assistant.\n\nALWAYS output STRICT RAW JSON only (no markdown, no code fences) with EXACT keys:\n\n{\n  \"intent\": \"gmail_related\" | \"context_related\" | \"normal_conversation\",\n  \"sub_intent\": \"inbox_related\" | \"thread_related\" | \"generalQuery\" | \"webSearch\" | \"\",\n  \"summarize_dates\": \"1 to 15\" (if user mentiones in the query). Else default value will be \"7\" if user does not ask.,\n  \"model\": \"Perplexity\" | \"\",\n  \"bot_reply\": \"<If the intent = \"normal_conversation\" and \"sub_intent\" =  \"generalQuery\" give a generic reply>\",\n  \"explanation\": \"<short reasoning>\",\n  \"specificity_score\": <number, only for context_related>,\n  \"requires_clarification\": <boolean, only for context_related>,\n  \"follow_up_question\": \"<string, only for context_related>\",\n  \"keywords_exact\": \"<pipe-separated terms, only for context_related, when necessary add keywords for better retrival for user query>\",\n  \"topK\": <number, only for context_related>,\n  \"route\": \"<clarify|retrieve, only for context_related>\",\n  \"memory_update\": {\n    \"id\": \"{{ $('Webhook').item.json.body.userId }}\",\n    \"Prompt\": \"{{ $('Webhook').item.json.body.query }}\",\n    \"requires_clarification\": false\n  }\n}\n\n--------------------------------------------------------------------------------\nHARD CONSTRAINTS (applicability mapping — violations are invalid)\n- If intent=\"gmail_related\" → sub_intent MUST be \"inbox_related\" or \"thread_related\" (or \"\" only if undecidable). \"generalQuery\" and \"webSearch\" are NOT allowed.\n- If intent=\"normal_conversation\" → sub_intent MUST be \"generalQuery\" or \"webSearch\". \"inbox_related\" and \"thread_related\" are NOT allowed.\n- If intent ∈ {\"context_related\"} → sub_intent MUST be \"\".\n\n--------------------------------------------------------------------------------\nCLASSIFICATION PRECEDENCE (apply in order and STOP at first match)\n1) gmail_related (summarize/compose/reply/draft/extract actions)\n2) context_related (requires inbox lookup or factual retrieval)\n3) normal_conversation (small talk or external info)\n\n--------------------------------------------------------------------------------\nINTENT RULES (deterministic)\n\nA) gmail_related → sub_intent ∈ {inbox_related, thread_related}\n   - THREAD only if:\n       (lower(query) contains any of: \"draft\", \"thread\",      \"thread\",\"conversation\",\"chain\", \"summarize this\")\n       AND subjectLine != \"\"\n     → sub_intent = \"thread_related\"; summarize_dates = \"\"\n   - INBOX if:\n       (lower(query) contains any of: \"summarize my inbox\",\"summary of my inbox\",\"overview of my inbox\"\n     → sub_intent = \"inbox_related\"; summarize_dates = EXTRACT_SUMMARIZE_DATES(query)\n   - Else (still gmail_related but not clearly thread/inbox and subjectLine exists):\n     → sub_intent = \"thread_related\"; summarize_dates = \"\"\n\nB) context_related\n   Trigger when the user asks for information that must be retrieved from  email data\n   Populate retrieval fields deterministically:\n     - specificity_score (0.00–1.00):\n         Start at 0.50.\n         +0.20 if query contains a proper name (capitalized word length≥2 not at sentence start) or an email-like token.\n         +0.10 if query contains a number or currency pattern.\n         +0.10 if query contains a date/time word (today,yesterday,week,weeks,month,months) or explicit date pattern (YYYY, dd/mm, mm/dd).\n         +0.10 if query contains a unique noun phrase ≥2 words (e.g., \"refund policy\", \"invoice status\").\n         Clamp to [0.00, 1.00].\n     - requires_clarification:\n         TRUE if specificity_score < 0.60; else FALSE.\n     - route:\n         \"clarify\" if requires_clarification is TRUE; otherwise \"retrieve\".\n     - follow_up_question:\n         ONLY IF requires_clarification TRUE, ask ONE concise disambiguator:\n           - If missing time: \"Which timeframe (last 7 days or a specific date)?\"\n           - If missing sender: \"From whom or which domain?\"\n           - If missing subject/topic: \"Any keywords from the subject?\"\n           - Else: \"Could you share more keywords or elaborate your query?\"\n         Else \"\".\n     - keywords_exact:\n         Pipe-separated list (no spaces around pipes) of exact terms extracted in order:\n           1) quoted phrases in query (without quotes)\n           2) email addresses\n           3) tokens after \"from:\" or \"subject:\" or \"label:\"\n           4) remaining capitalized multiword sequences (e.g., \"Acme Corp\")\n           5) standalone tokens with digits (e.g., \"INV-1042\", \"PO123\")\n         If none, \"\".\n     - topK:\n         10 if specificity_score ≥ 0.80\n         15 if 0.65 ≤ specificity_score < 0.80\n         20 if specificity_score < 0.65\n\n-When user asks for \"list\", \"fetch\",\"give all emails\" = \"context_related\", sub_intent=\"\"\n\n- \"keywords_exact\": If intent = \"context_related\", extract key nouns, names, or phrases (such as sender names, email addresses, or project titles) from the user query that define what information to retrieve.\nJoin them with \"|\" (pipe) as delimiters to improve retrieval precision.\nWhen the query includes a sender or contact (e.g., “emails from Nishant”), also include their resolved email address in the keywords and fetch all matching emails with subject, date, and body.\nOtherwise, leave empty.\n\n   Output: intent=\"context_related\", sub_intent=\"\"\n\nC) normal_conversation\n   Trigger when the message is small talk/greeting/acknowledgment OR unrelated to Gmail and asks for external info.\n   - If external info requested (e.g., \"news about AI\", \"latest AI trends\"):\n       sub_intent=\"webSearch\", model=\"Perplexity\"\n   - Else:\n       sub_intent=\"generalQuery\", model=\"\"\n   summarize_dates=\"\"\n--------------------------------------------------------------------------------\nMEMORY UPDATE\nAlways include \"memory_update\" with id and Prompt. Set \"requires_clarification\" to the same boolean used in context_related; otherwise false.\n\n--------------------------------------------------------------------------------\nNTER-TURN CLARIFICATION FUSION (deterministic)\n\nApplies only if the most recent entry in \"Memory\" (by created_at) had \"requires_clarification=true\".\n\nIf not, skip this section and proceed with normal classification.\n\nWhen triggered:\n\nTreat the current user input as a clarification reply to the previous query.\n→ intent=\"context_related\"\n→ requires_clarification=false\n→ route=\"retrieve\"\n\nFuse the original query and clarification reply into a single retrieval phrase.\n\nCombine both into keywords_exact as a pipe-separated string.\n\nExample:\nOriginal: “When is my client meeting?”\nClarification: “1 month”\n→ keywords_exact=\"client meeting|last 1 month\"\n\nRecompute retrieval parameters deterministically:\n\nUpdate specificity_score using the same scoring logic, now including clarified terms.\n\nSet topK accordingly (≥0.80 → 10; 0.65–0.79 → 15; <0.65 → 20).\n\nGuardrails:\n\nExecute this fusion logic only when the prior turn required clarification.\n\nIf user input is off-topic or adds unrelated detail, keep requires_clarification=true and ask another follow-up.\n\nOutput schema and key rules remain unchanged.\n\n--------------------------------------------------------------------------------\nOUTPUT VALIDATION (hard rules)\n- Keys and allowed values must match exactly as specified.\n- Enforce applicability mapping:\n    * intent=\"gmail_related\" → sub_intent ∈ {\"inbox_related\",\"thread_related\",\"\"} only.\n    * intent=\"normal_conversation\" → sub_intent ∈ {\"generalQuery\",\"webSearch\"} only.\n    * intent ∈ {\"context_related\"} → sub_intent=\"\" only.\n- For gmail_related, summarize_dates is filled ONLY if sub_intent=\"inbox_related\"; otherwise \"\".\n- Omit context_related-only fields for other intents (do NOT include them with null/empty).\n- Strings must not contain markdown/code fences.\n- No extra keys.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -1168,
+        784
+      ],
+      "id": "007a4872-da9a-4bf5-9c24-20d520c04782",
+      "name": "AI Agent - Intent Classifier"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Keywords for retrieval reference is - {{ $json.keywords_exact }}\n\nThe user query is - {{ $json.user_query }}",
+        "options": {
+          "systemMessage": "=You are the Context Retrieval & Prioritization Agent for a Gmail assistant.\n\nYou have access to a Pinecone Vector Store containing email data.\nEach record has:\n- pageContent: full email text (headers + body)\n- metadata: sender_name, sender_email, subject, date, date_epoch\n\nAlways use this tool for any query involving emails.\nWhen retrieval results are empty or weak, retry using broader or fuzzy matches on sender_name and sender_email.\n\n\nYour job is to answer inbox-related queries only by using the retrieval tool to search through the user's email data stored in Pinecone vector store.\n\nEMAIL DATA STRUCTURE:\n\nThe vector store contains emails with:\n\npageContent: Full email text with headers (Subject, From, To, Date, Labels, Body)\n\nmetadata: id, thread_id, sender_email, receiver_email, subject, date, date_epoch, labelIds, source\n\nRETRIEVAL STRATEGY:\n\nUse keywords_exact as provided (no modifications).\n\nCall Vector Store Retrieval tool with the user's query context.\n\nAnalyze retrieved emails focusing on:\n\nEmail content and intent relevance\n\nSender/receiver information\n\nDates and timestamps\n\nSubject lines and thread relationships\n\nLabel information (INBOX, SENT, UNREAD, IMPORTANT, etc.)\n\nQUERY TYPES & RESPONSE BEHAVIOR\n1. SINGLE EMAIL / THREAD QUERIES\n\nExamples:\n\n“Show me the email about X”\n\n“What did John say about the project?”\n\n✅ Response Format:\nReturn a single summarized answer, not a list.\nInclude sender, subject, date, and a concise summary of the email’s core message. Limit summary to ≤ 40 words.\n\n{\n  \"bot_reply\": \"On <date>, <sender> sent an email titled '<subject>' discussing <summary of content>.\"\n}\n\n\n2. MULTIPLE EMAIL / LISTING QUERIES\n\nExamples:\n\n“List emails from John”\n\n“Show me all emails about invoices”\n\n✅ Response Format:\nReturn a list of summarized entries (3–5 max) with subject, date, and short overview. Limit each overview to ≤ 15 words per email.\n{\n  \"bot_reply\": [\n    {\n      \"subject\": \"<email subject>\",\n      \"date\": \"<YYYY-MM-DD>\",\n      \"overview\": \"<one-line summary>\"\n    }\n  ]\n}\n\n3. SEARCH OR CONTEXTUAL QUERIES\n\nExamples:\n\n“Find emails containing payment confirmation”\n\n“When did I receive payment from company A?”\n\n✅ Response Format:\nReturn a short paragraph describing the findings with context (dates, amounts, sender).Limit response to ≤ 40 words total.\n{\n  \"bot_reply\": \"You received 3 emails mentioning 'payment confirmation' — the most recent was on <date> from <sender> with subject '<subject>'.\"\n}\n\n4. DATE-BASED QUERIES\n\nExamples:\n\n“Emails from last week”\n\n“What did I receive yesterday?”\n\n✅ Response Format:\nSummarize key results chronologically (not a list unless explicitly asked).Limit summary to ≤ 25 words.\n{\n  \"bot_reply\": \"Between <date range>, you received <count> emails including '<subject1>' from <sender1> and '<subject2>' from <sender2>.\"\n}\n\nRESPONSE GUIDELINES:\n\nBe specific: Always include sender, date, and subject.\n\nAdapt format to intent:\n\nUse list format only when user explicitly asks to “list”, “show all”, or “emails from X”.\n\nOtherwise, provide short narrative summary.\n\nProvide context: Include why these emails match.\n\nHandle no results: Return a helpful suggestion.\n\nERROR HANDLING:\n\nIf retrieval returns no usable evidence: Keep message concise, ≤ 25 words.\n{\n  \"bot_reply\": \"I couldn’t find matching emails. Try being more specific with sender names, subject keywords, or date ranges (e.g., 'emails from john@company.com about budget' or 'invoices from last month').\"\n}\n\n\nOUTPUT FORMAT (STRICT RULE)\n\nAlways return raw JSON with a top-level \"bot_reply\" key.\n\n\"bot_reply\" may be:\n\na string → for single/narrative answers\n\nor an array of objects → for listing-type queries\n\nDo NOT mix both.\n\n{\n  \"bot_reply\": \"\"\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        1920,
+        112
+      ],
+      "id": "130d8cb9-e9ae-4eba-8f68-16c3183e3872",
+      "name": "AI Agent - Context Aware"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a6496c29-d4e4-449d-b76a-3dcf244d59bc",
+              "name": "topK",
+              "value": "={{ $json.topK || ($json.specificity_score >= 0.80 ? 12 : ($json.specificity_score >= 0.65 ? 20 : ($json.specificity_score >= 0.45 ? 40 : 0))) }}",
+              "type": "string"
+            },
+            {
+              "id": "6a94a25f-1d89-4017-8660-658ffea062dd",
+              "name": "keywords_exact",
+              "value": "={{ $json.keywords_exact }}",
+              "type": "string"
+            },
+            {
+              "id": "54f48179-87dc-4aba-b0ca-041879b985b9",
+              "name": "route",
+              "value": "={{ $json.route || ($json.topK === 0 ? 'clarify' : 'retrieve') }}",
+              "type": "string"
+            },
+            {
+              "id": "86197d0e-52a5-4062-9871-486990bf2d3b",
+              "name": "requires_clarification",
+              "value": "={{ $json.requires_clarification || ($json.topK === 0) }}",
+              "type": "string"
+            },
+            {
+              "id": "44e2a157-0028-4178-8d60-131971045514",
+              "name": "user_query",
+              "value": "={{ $('Webhook').item.json.body.query }}",
+              "type": "string"
+            },
+            {
+              "id": "99c447e9-5198-4375-866c-59b560449537",
+              "name": "explanation",
+              "value": "={{ $json.explanation }}",
+              "type": "string"
+            },
+            {
+              "id": "4e5d172e-c7c2-494a-b7b6-dce070fff50c",
+              "name": "follow_up_question",
+              "value": "={{ $json.follow_up_question }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        976,
+        208
+      ],
+      "id": "546498c7-8661-4213-a248-f6341f4600a5",
+      "name": "Set - Classifier Post-Process"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9763be2d-c08d-4dd2-b9a2-e8f7436bba47",
+              "leftValue": "={{ $json.route === 'clarify' || $json.requires_clarification === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        208
+      ],
+      "id": "8441723b-6879-4649-888f-2ee265603d25",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea04311d-e99f-41fd-9a3c-8790c3be7763",
+              "name": "reply",
+              "value": "={{ $json.follow_up_question }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2928,
+        224
+      ],
+      "id": "5d52bb86-5f84-4165-9909-34e80a89c3b3",
+      "name": "Reply (clarify)"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "Memory",
+        "include": "allFieldsExcept",
+        "fieldsToExclude": "id",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1616,
+        1584
+      ],
+      "id": "7992fcf8-310e-4e5c-b8b5-049f88780c33",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1392,
+        784
+      ],
+      "id": "9ca458c5-94f6-4993-9509-37c0c05bfe2e",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/User_Prompt_Management",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\",\n  \"Prefer\": \"resolution=merge-duplicates,return=representation\"\n}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "id",
+              "value": "={{ $('Webhook').item.json.body.userId }}"
+            },
+            {
+              "name": "Prompt",
+              "value": "={{ $('Webhook').item.json.body.query }}"
+            },
+            {
+              "name": "requires_clarification",
+              "value": "={{ $json.memory_update.requires_clarification || FALSE }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Supabase: Upsert user",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1616,
+        784
+      ],
+      "id": "d825ad5d-896d-4c4f-ab28-7e268ed78c75"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/User_Prompt_Management?select=id,Prompt,requires_clarification,created_at&order=created_at.desc&limit=5&id=eq.{{ $json.body.userId }}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\"\n}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "name": "Supabase: GET Memory",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        -1840,
+        1584
+      ],
+      "id": "f3acc153-045f-46bd-8218-7386e7d5c3bc",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Email Context Preprocessor\nconst userQuery = $('Webhook').item.json.body.query;\nconst keywords = $json.keywords_exact || \"\";\nconst explanation = $json.explanation || \"\";\n\n// Extract potential email identifiers\nconst emailPattern = /[\\w\\.-]+@[\\w\\.-]+\\.\\w+/g;\nconst emails = userQuery.match(emailPattern) || [];\n\n// Extract date references\nconst datePattern = /\\b(yesterday|today|last\\s+\\w+|this\\s+\\w+|\\d+\\s+days?\\s+ago)\\b/gi;\nconst dateRefs = userQuery.match(datePattern) || [];\n\n// Extract subject keywords (quoted text)\nconst subjectPattern = /\"([^\"]+)\"/g;\nconst subjects = [];\nlet match;\nwhile ((match = subjectPattern.exec(userQuery)) !== null) {\n  subjects.push(match[1]);\n}\n\nreturn [{\n  json: {\n    user_query: userQuery,\n    keywords_exact: keywords,\n    explanation: explanation,\n    extracted_emails: emails,\n    date_references: dateRefs,\n    subject_keywords: subjects,\n    Memory: $json.Memory || []\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1488,
+        432
+      ],
+      "id": "656f1fa9-8799-4f84-9228-427eaa376d44",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3408,
+        784
+      ],
+      "id": "cd661f64-81b6-4b81-acc5-8acae2404a45",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/User_Prompt_Management?uid=eq.{{ $json.uid }}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "={\n  \"apikey\": \"{{$env.SUPABASE_ANON_KEY}}\",\n  \"Authorization\": \"Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}\",\n  \"Content-Type\": \"application/json\",\n  \"Prefer\": \"return=representation\"\n}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "n8n_response",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Supabase: Upsert user1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        3744,
+        944
+      ],
+      "id": "19af6d85-0e70-468e-93ae-8520d6851e48",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "23fad41c-1aea-4852-97b7-adb0d7547cda",
+              "name": "reply",
+              "value": "={{ $json.message.content.bot_reply }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2944,
+        1408
+      ],
+      "id": "fe3683e5-b3f0-4a2c-b40a-98441c7e6313",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4e515f77-59ed-4537-995c-78b82d83bb5b",
+              "leftValue": "={{ $json.message.content.draft_required }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        1360
+      ],
+      "id": "30e8df8e-de3b-471c-a1f9-ba7cd3e46c55",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/drafts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$('Exchange Refresh Token').item.json.access_token}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {\n    \"threadId\": \"{{ $json.threadId }}\",\n    \"raw\": \"{{ $json.raw }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3392,
+        1168
+      ],
+      "id": "c7ad657d-c707-48c2-82f6-8e74385923a9",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Input (on this item):\n *  - threadId   : string (required) — Gmail thread id\n *  - toEmail    : string (optional) — who you’re replying to (for the draft UI)\n *  - subject    : string (optional) — reply subject (\"Re: ...\" already handled by you)\n *  - inReplyTo  : string (optional) — original Message-ID like \"<...@mail>\"\n *  - body       : string (required) — draft content (plain text or HTML)\n *\n * Optional extras you may include on the same item (all optional):\n *  - isHtml     : boolean — true to treat `body` as HTML\n *  - cc         : string (comma separated or single)\n *  - bcc        : string (comma separated or single)\n *  - replyTo    : string (email)\n *  - references : string[] — additional Message-IDs for the References header\n */\n\nconst {\n  threadId,\n  toEmail,\n  subject,\n  inReplyTo,\n  body,\n  isHtml,\n  cc,\n  bcc,\n  replyTo,\n  references,\n} = $json;\n\nif (!threadId) throw new Error('threadId is required');\nif (!body) throw new Error('body is required');\n\nfunction normList(v) {\n  if (!v) return null;\n  if (Array.isArray(v)) return v.filter(Boolean).join(', ');\n  return String(v);\n}\n\nconst headers = [\n  toEmail ? `To: ${toEmail}` : null,\n  subject ? `Subject: ${subject}` : 'Subject: (no subject)',\n  replyTo ? `Reply-To: ${replyTo}` : null,\n  normList(cc) ? `Cc: ${normList(cc)}` : null,\n  normList(bcc) ? `Bcc: ${normList(bcc)}` : null,\n  inReplyTo ? `In-Reply-To: ${inReplyTo}` : null,\n  // If you provide references[], we include them; otherwise fall back to inReplyTo.\n  (Array.isArray(references) && references.length)\n    ? `References: ${references.join(' ')}`\n    : (inReplyTo ? `References: ${inReplyTo}` : null),\n  isHtml\n    ? 'Content-Type: text/html; charset=\"UTF-8\"'\n    : 'Content-Type: text/plain; charset=\"UTF-8\"',\n  'MIME-Version: 1.0',\n].filter(Boolean);\n\nconst mime = headers.concat(['', body]).join('\\r\\n');\n\n// base64url encode for Gmail\nconst raw = Buffer.from(mime, 'utf8')\n  .toString('base64')\n  .replace(/\\+/g, '-')\n  .replace(/\\//g, '_')\n  .replace(/=+$/g, '');\n\nreturn {\n  threadId,\n  raw,\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        1168
+      ],
+      "id": "f0f701c5-662b-41c0-b4fd-e20644cd57e2",
+      "name": "code: create draft"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pull the thread JSON from *this* item, not another node.\nfunction headerVal(headers, name) {\n  const h = (headers || []).find(h => (h.name || '').toLowerCase() === name.toLowerCase());\n  return h ? h.value : null;\n}\n\nconst thread = $json;\nif (!thread?.messages?.length) {\n  throw new Error('List Thread: no messages found in thread.');\n}\n\nconst latest  = thread.messages[thread.messages.length - 1];\nconst headers = latest.payload?.headers || [];\n\nconst origSubject = headerVal(headers, 'Subject') || '(no subject)';\nconst messageId   = headerVal(headers, 'Message-Id') || headerVal(headers, 'Message-ID') || '';\nconst fromHeader  = headerVal(headers, 'From') || '';\nconst m = fromHeader.match(/<?([\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,})>?/);\nconst toEmail = m ? m[1] : '';\n\nreturn {\n  threadId: thread.id,\n  toEmail,\n  subject: /^re:/i.test(origSubject) ? origSubject : `Re: ${origSubject}`,\n  inReplyTo: messageId || null\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        1120
+      ],
+      "id": "c1616578-f201-4394-a68c-01d0680ad864",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2656,
+        1168
+      ],
+      "id": "a3cba92a-b087-493d-928e-3a2c9d8adefa",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2aa0438a-3151-4bb7-a6ba-cfcc6423374f",
+              "name": "threadId",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "aef8f6f6-13a8-4a12-94a1-33da958b847d",
+              "name": "toEmail",
+              "value": "={{ $json.toEmail }}",
+              "type": "string"
+            },
+            {
+              "id": "2ecf4cb2-7e0e-4c15-a857-22c8b86579f8",
+              "name": "subject",
+              "value": "={{ $json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "609b6dc6-d56e-4e75-8f05-07cf3d3c3a03",
+              "name": "inReplyTo",
+              "value": "={{ $json.inReplyTo }}",
+              "type": "string"
+            },
+            {
+              "id": "9d782578-b050-46dc-a376-3d2215e7c283",
+              "name": "body",
+              "value": "={{ $json.message.content.bot_reply }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2944,
+        1168
+      ],
+      "id": "4cb9beab-b6bb-48e4-b678-d066d29bdcdc",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"reply\": \"Draft has been created, refresh or check drafts\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        3616,
+        1168
+      ],
+      "id": "76a18dc1-a583-4c8f-a929-fd3726a1e49d",
+      "name": "Respond to Webhook4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a45a99eb-7a10-4589-b153-70b94bab800f",
+              "name": "sub_intent",
+              "value": "context_update",
+              "type": "string"
+            },
+            {
+              "id": "185b00a9-d91f-4ec7-9c41-85a9201bc394",
+              "name": "body.userId",
+              "value": "={{ $json.body.userId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1840,
+        1840
+      ],
+      "id": "4d50e461-8081-4009-84cb-11c90556f5c1",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "requestMethod": "POST",
+        "url": "={{$env.GOOGLE_OAUTH_TOKEN_URL}}",
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "client_id",
+              "value": "={{$env.GOOGLE_CLIENT_ID}}"
+            },
+            {
+              "name": "client_secret",
+              "value": "={{$env.GOOGLE_CLIENT_SECRET}}"
+            },
+            {
+              "name": "refresh_token",
+              "value": "={{ $json.refresh_token }}"
+            },
+            {
+              "name": "grant_type",
+              "value": "refresh_token"
+            }
+          ]
+        }
+      },
+      "name": "Exchange Refresh Token1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        -1392,
+        1840
+      ],
+      "id": "654d98c8-c9f8-4ac1-b52f-b77c29e17e28"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "users",
+        "limit": 100,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "user_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.userId }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1616,
+        1840
+      ],
+      "id": "1e3f4471-ed81-46cd-8e8e-9e215cba37e4",
+      "name": "Get User ID1",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "AV3EDOwGJg3BQ3LT",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5f97ae85-7832-4bd5-9145-0f2e1293a85e",
+              "name": "access_token",
+              "value": "={{ $json.access_token }}",
+              "type": "string"
+            },
+            {
+              "id": "c15d8b39-818c-41fa-a634-4682e56b968b",
+              "name": "sub_intent",
+              "value": "={{ $('Edit Fields1').item.json.sub_intent }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1104,
+        1840
+      ],
+      "id": "53cbfc1b-baab-4b76-b8c9-099e6dd26aa2",
+      "name": "Set Access Token1"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "=Always retrieve complete emails, not just entities.\n\nSchema:\n\npageContent: full email text (headers + body)\n\nmetadata: sender_name, sender_email, subject, date, date_epoch\n\nRetrieval logic:\n\nFor any query (even single-word, e.g., “devang”), treat it as a sender/receiver/person/topic filter — not a keyword lookup.\n\nAlways search across both pageContent and metadata fields together (sender_name, sender_email, subject, and body text).\n\nIf query token count ≤ 2 or vague (name-only / no clear topic):\n\nFallback strategy:\n\nRun metadata match on sender_name and sender_email (partial + fuzzy).\n\nExpand with variants like lowercase, initials, and domain (@, .com).\n\nThen perform a broad vector search on pageContent.\n\nMerge and deduplicate results by metadata.subject + metadata.date_epoch.\n\nGuarantee minimum 10 and up to 50 hits.\n\nRank results by latest metadata.date_epoch, then semantic similarity.\n\nAlways return full email context (subject, sender_name, sender_email, date, and a brief overview from pageContent).\n\nRule: Never stop at the identity or sender details — must always output email-level data.\n\nIf zero matches: Automatically broaden query to include partial/fuzzy matches in both sender_name and sender_email.",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "email-context",
+          "mode": "list",
+          "cachedResultName": "email-context"
+        },
+        "topK": 120,
+        "options": {
+          "pineconeNamespace": "={{ $('Webhook').first().json.body.userId }}-ns"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        2224,
+        336
+      ],
+      "id": "c98d141a-de1c-404c-9e60-a63088e53861",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "mX5Mp9fM0gydbhMt",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2304,
+        448
+      ],
+      "id": "5f61467c-b438-473b-96ec-1a9b27afa6c2",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assume the input is an array of Gmail messages (like the one you showed)\n// You can access it in n8n via `items` or `items[0].json` depending on your setup\n\n// Example: filter only messages with CATEGORY_PERSONAL label\nreturn items\n  .map(item => item.json) // extract actual JSON if wrapped by n8n\n  .filter(email => Array.isArray(email.labelIds) && email.labelIds.includes(\"CATEGORY_PERSONAL\"))\n  .map(email => ({ json: email })); // return in n8n format"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        928
+      ],
+      "id": "19796017-2295-4c40-9066-afaccd069975",
+      "name": "Code: Filter CATEGORY_PERSONAL"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.rerankerCohere",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        624
+      ],
+      "id": "2d8ef248-333c-41a0-9eba-176653f1d4b2",
+      "name": "Reranker Cohere",
+      "credentials": {
+        "cohereApi": {
+          "id": "STdKBbrTUUue83kp",
+          "name": "CohereApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter Gmail messages that belong to CATEGORY_PERSONAL or CATEGORY_UPDATES\nreturn items\n  .map(item => item.json) // extract actual JSON if wrapped by n8n\n  .filter(email => \n    Array.isArray(email.labelIds) &&\n    (\n      email.labelIds.includes(\"CATEGORY_PERSONAL\") ||\n      email.labelIds.includes(\"CATEGORY_UPDATES\")\n    )\n  )\n  .map(email => ({ json: email })); // return in n8n format\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        1840
+      ],
+      "id": "edddfbe1-1939-48a0-9f8b-d8a3180d84f9",
+      "name": "Code: Filter CATEGORY_PERSONAL1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-4-turbo"
+        },
+        "options": {
+          "maxTokens": -1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2096,
+        496
+      ],
+      "id": "c15cd7b9-270d-4bd7-bcd8-d52a7b67afb0",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "KvebejLef3Y26fjP",
+          "name": "OpenAi account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://connector.saai.dev/webhook/Label ID",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "={{ $('Webhook').item.json.jwtPayload.sub }}"
+            },
+            {
+              "name": "=access_token",
+              "value": "={{ $json.access_token }}"
+            },
+            {
+              "name": "Email",
+              "value": "={{ $('Webhook').item.json.jwtPayload.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -736,
+        2240
+      ],
+      "id": "1263609a-7308-486c-a78c-1ff701bc1325",
+      "name": "HTTP Request2"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "connector.saai.dev",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+            "content-length": "97",
+            "accept": "application/json",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.9",
+            "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMTA4NzM1MzI1NTE3NTE1NzkyNTEiLCJlbWFpbCI6ImR4YmRldjRAZ21haWwuY29tIiwic2NvcGUiOlsiY2hhdDpyZWFkIiwiY2hhdDp3cml0ZSJdLCJpYXQiOjE3NjI3NjI5NTMsImV4cCI6MTc2Mjc2MzU1M30.N00rm-lbqjqQNhEkJ-VIEVC_c96Zn5Nk9zkleOxolBM",
+            "content-type": "application/json",
+            "cookie": "rl_page_init_referrer=RudderEncrypt%3AU2FsdGVkX1%2B5p0EZvCxaemizftKYWV3h9w3V4BtWrhk%3D; rl_page_init_referring_domain=RudderEncrypt%3AU2FsdGVkX1%2BbYvCCyZRs60YwzY48IVCRW%2BWa56U7rno%3D; rl_anonymous_id=RudderEncrypt%3AU2FsdGVkX1%2FU%2FElDxfUBJiR6DkTPTDIrsVyerW8seoRVxursaMlxjRgg45hzUE99F3odVSYyG2c0b1Vq%2F5tDXg%3D%3D; rl_user_id=RudderEncrypt%3AU2FsdGVkX19kDi7QTYwnJPMCUffh%2B9a9EQlqnAIwVTC4IHkO1ZXtaya9xxsbmDf7G0JXU%2FuR0nbE5MmxZYVwPWsWX1TzmOU3MzTdjGu1SGQ52hskDCs4kJDUI8hhLdj5qUzo6sWFdVN%2FStOhBJb5fgAv2GoJt8uVKHYYEHPbFkA%3D; rl_trait=RudderEncrypt%3AU2FsdGVkX1%2BZzb82Xtmtq9Zua0yF1Zcnifw4iNR7uB30XGfOj1dUP2vv6VZMTAD83OPmZXq4tWe%2B0EvFbAV1CB1%2FOum%2Fpe92cWNup3269uQUha4%2FzIIQZU4JGoBuvPW0ZlOOt8aRFr3E5kb4oKX%2BRdxSoyZSF5FEFacgB4Aynqs%3D; ph_phc_4URIAm1uYfJO7j8kWSe0J8lc8IqnstRLS7Jx8NcakHo_posthog=%7B%22distinct_id%22%3A%2213d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5%238e352bbe-5994-4b2b-8346-d5ac8f79ac75%22%2C%22%24sesid%22%3A%5B1762762946419%2C%22019a6c7a-8cbe-7d53-99c3-8784794cb844%22%2C1762756562110%5D%2C%22%24epp%22%3Atrue%2C%22%24initial_person_info%22%3A%7B%22r%22%3A%22%24direct%22%2C%22u%22%3A%22https%3A%2F%2Fconnector.saai.dev%2Fsignin%3Fredirect%3D%25252Fworkflow%25252F6F262nC14sfSLLaE%22%7D%7D; rl_session=RudderEncrypt%3AU2FsdGVkX1%2FIe64LPaYbmGXZaA4Al6TvmLRtlO7qDrvpJKdth2iMN3NTHTuqgxaVRJeEu6PtzaoBnBQ7ED%2BZWUfwD2Kszq8qnsUnh13AQTXXqpaAcrN4OmoiL9Eog4sUinctVxGa8WVlmjxLKQheog%3D%3D",
+            "origin": "chrome-extension://cmmjlngjamdemediohghdbinocakjkfj",
+            "priority": "u=1, i",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "none",
+            "sec-fetch-storage-access": "active",
+            "x-forwarded-for": "113.30.217.95",
+            "x-forwarded-host": "connector.saai.dev",
+            "x-forwarded-proto": "https",
+            "x-railway-edge": "railway/asia-southeast1-eqsg3a",
+            "x-railway-request-id": "JdlstcyjT8OqQDQracI7Nw",
+            "x-real-ip": "113.30.217.95",
+            "x-request-start": "1762762953698"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "query": "how are you",
+            "userId": "110873532551751579251",
+            "context": "GmailChat",
+            "sidebarWidth": 500
+          },
+          "webhookUrl": "https://connector.saai.dev/webhook/Chatbot-Nishant",
+          "executionMode": "production",
+          "jwtPayload": {
+            "sub": "110873532551751579251",
+            "email": "dxbdev4@gmail.com",
+            "scope": [
+              "chat:read",
+              "chat:write"
+            ],
+            "iat": 1762762953,
+            "exp": 1762763553
+          }
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Supabase: GET Memory",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exchange Refresh Token": {
+      "main": [
+        [
+          {
+            "node": "Set Access Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Message Details": {
+      "main": [
+        [
+          {
+            "node": "Code: Filter CATEGORY_PERSONAL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out Items": {
+      "main": [
+        [
+          {
+            "node": "Get Message Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "List Messages for Inbox Summarization",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Thread summarize",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Message a model2": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Message Details1": {
+      "main": [
+        [
+          {
+            "node": "Code: Filter CATEGORY_PERSONAL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User ID": {
+      "main": [
+        [
+          {
+            "node": "Exchange Refresh Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set - Classifier Post-Process",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get User ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Messages for Context": {
+      "main": [
+        [
+          {
+            "node": "Fetch existing id's",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Messages for Inbox Summarization": {
+      "main": [
+        [
+          {
+            "node": "Split Out Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Access Token": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch existing id's": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Get Message Details1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Intent Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code4": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Supabase: Upsert user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store2": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Retrieval1",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Retrieval1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Context Aware",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List thread": {
+      "main": [
+        [
+          {
+            "node": "Code5",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Thread summarize": {
+      "main": [
+        [
+          {
+            "node": "Thread summarize1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Thread summarize1": {
+      "main": [
+        [
+          {
+            "node": "List thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code5": {
+      "main": [
+        [
+          {
+            "node": "Message a model2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code6": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - decode base64": {
+      "main": [
+        [
+          {
+            "node": "Code6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Context Aware",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code8": {
+      "main": [
+        [
+          {
+            "node": "Reply1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Perplexity API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity API": {
+      "main": [
+        [
+          {
+            "node": "Perplexity Response Structure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity Response Structure": {
+      "main": [
+        [
+          {
+            "node": "Format Perplexity Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Perplexity Response": {
+      "main": [
+        [
+          {
+            "node": "Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Intent Classifier": {
+      "main": [
+        [
+          {
+            "node": "Code4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Context Aware": {
+      "main": [
+        [
+          {
+            "node": "Code8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set - Classifier Post-Process": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Reply (clarify)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply (clarify)": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Intent Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Supabase: GET Memory": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Context Aware",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: Upsert user": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook3": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Supabase: Upsert user1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "code: create draft": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "code: create draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Get User ID1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Exchange Refresh Token1": {
+      "main": [
+        [
+          {
+            "node": "Set Access Token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User ID1": {
+      "main": [
+        [
+          {
+            "node": "Exchange Refresh Token1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Access Token1": {
+      "main": [
+        [
+          {
+            "node": "List Messages for Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Context Aware",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Filter CATEGORY_PERSONAL": {
+      "main": [
+        [
+          {
+            "node": "Code - decode base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reranker Cohere": {
+      "ai_reranker": [
+        []
+      ]
+    },
+    "Code: Filter CATEGORY_PERSONAL1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Vector Store Retrieval1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c4806aaa-6b35-4781-a0aa-10995e517462",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "ZcglwHFoRAqLD0bR",
+  "tags": []
+}

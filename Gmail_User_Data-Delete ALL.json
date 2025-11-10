@@ -1,0 +1,113 @@
+{
+  "name": "Gmail User Data - Delete ALL",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "=/pinecone/delete",
+        "authentication": "jwtAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -16
+      ],
+      "id": "af3b717c-4108-466a-8279-7d902e7cd6e5",
+      "name": "Webhook",
+      "webhookId": "3038fca1-7713-47ab-a514-f5281381e8a8",
+      "credentials": {
+        "jwtAuth": {
+          "id": "bJS1bfXc2RaUr7bV",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://email-context-23idbia.svc.aped-4627-b74a.pinecone.io/vectors/delete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "pcsk_3xENtk_RJ237FtAfNpfJQaF64mSkHAbcjEBdV6CNGj1eUfwWc4v4WLZ7R8ZA4QsPPDAwf1"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"deleteAll\": true,\n    \"namespace\": \"{{ $json.body.userId-ns }}\"\n    }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        32,
+        -16
+      ],
+      "id": "816f270b-a578-473d-b17a-97bbf247abd2",
+      "name": "HTTP Request",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Namespace has been deleted successfully ",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        256,
+        -16
+      ],
+      "id": "d2c3c1f3-351f-4b5f-a78f-6efe9b3190c0",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ef70a040-fc50-48d4-ae34-14eb40f53768",
+  "meta": {
+    "instanceId": "13d40b3fca888575659b25f441dd33056bd59b5214a1e1e9c8e2ac2510be3da5"
+  },
+  "id": "1J6TQleIe09J5RA8",
+  "tags": []
+}
